@@ -6,7 +6,8 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8)
     full_name: str = Field(..., min_length=2)
     phone: Optional[str] = None
-    organization_name: Optional[str] = None # If provided, creates an organization and makes user Admin
+    organization_name: Optional[str] = None
+    role: Optional[str] = None # Admin, Manager, Technician, Customer
 
 class LoginRequest(BaseModel):
     email: EmailStr

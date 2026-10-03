@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Logo } from '../../components/ui/Logo';
-import { Lock, Mail, User, Building, AlertCircle, ArrowRight, Check, X } from 'lucide-react';
+import { Lock, Mail, User, Building, AlertCircle, ArrowRight, Check, X, Wrench, Shield, Briefcase, Users } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const { register } = useAuth();
@@ -12,6 +13,7 @@ export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [role, setRole] = useState<UserRole>('Customer');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,9 +39,16 @@ export const Register: React.FC = () => {
         email,
         password,
         full_name: fullName,
-        organization_name: orgName || undefined,
+        organization_name: orgName.trim() || undefined,
+        role: role,
       });
-      navigate('/admin');
+
+      // Route directly into intended workspace
+      if (user.role === 'Customer') navigate('/customer');
+      else if (user.role === 'Technician') navigate('/technician');
+      else if (user.role === 'Manager') navigate('/manager');
+      else if (user.role === 'Admin') navigate('/admin');
+      else navigate('/customer');
     } catch (err: any) {
       setError(err.message || 'Registration failed.');
     } finally {
@@ -47,16 +56,43 @@ export const Register: React.FC = () => {
     }
   };
 
+  const roleOptions: { role: UserRole; title: string; desc: string; icon: any }[] = [
+    {
+      role: 'Customer',
+      title: 'Customer / Requester',
+      desc: 'Report facility issues, track tickets, confirm repairs & give ratings',
+      icon: Users,
+    },
+    {
+      role: 'Technician',
+      title: 'Technician',
+      desc: 'Accept field jobs, use AI diagnostics, log hours & upload photo proof',
+      icon: Wrench,
+    },
+    {
+      role: 'Manager',
+      title: 'Operations Manager',
+      desc: 'Review queue, prioritize issues, assign technicians & track SLAs',
+      icon: Briefcase,
+    },
+    {
+      role: 'Admin',
+      title: 'Administrator',
+      desc: 'Full workspace control, user roles, invitations, assets & audit logs',
+      icon: Shield,
+    },
+  ];
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white dark:bg-brand-dark-card p-8 sm:p-10 rounded-3xl border border-brand-evergreen/10 dark:border-brand-dark-border shadow-card">
+      <div className="max-w-lg w-full space-y-7 bg-white dark:bg-brand-dark-card p-8 sm:p-10 rounded-3xl border border-brand-evergreen/10 dark:border-brand-dark-border shadow-card">
         <div className="text-center">
           <Logo size="lg" />
           <h2 className="mt-6 text-2xl font-extrabold text-brand-evergreen dark:text-white font-sans">
-            Create your organization
+            Create your account
           </h2>
           <p className="mt-2 text-xs text-brand-forest/60 dark:text-brand-dark-muted">
-            Start managing maintenance, technicians, and work orders
+            Select your role to connect directly to the operational workflow
           </p>
         </div>
 
@@ -68,6 +104,42 @@ export const Register: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Role Selection Grid */}
+          <div>
+            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-2">
+              Select Your Role
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {roleOptions.map(opt => {
+                const IconComponent = opt.icon;
+                const isSelected = role === opt.role;
+                return (
+                  <button
+                    key={opt.role}
+                    type="button"
+                    onClick={() => setRole(opt.role)}
+                    className={`p-3 text-left rounded-xl border transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-brand-jade bg-brand-jade/10 text-brand-evergreen dark:text-white ring-2 ring-brand-jade/20'
+                        : 'border-brand-evergreen/10 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg hover:border-brand-jade/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <IconComponent className={`w-4 h-4 ${isSelected ? 'text-brand-jade' : 'text-brand-forest/60 dark:text-brand-dark-muted'}`} />
+                        <span className="text-xs font-bold">{opt.title}</span>
+                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-brand-jade" />}
+                    </div>
+                    <p className="text-[10px] text-brand-forest/65 dark:text-brand-dark-muted leading-tight">
+                      {opt.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
               Your Full Name
@@ -79,7 +151,7 @@ export const Register: React.FC = () => {
                 required
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                placeholder="Sarah Jenkins"
+                placeholder="Jane Doe"
                 className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
               />
             </div>
@@ -87,7 +159,7 @@ export const Register: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
-              Work Email
+              Email Address
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
@@ -96,26 +168,32 @@ export const Register: React.FC = () => {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="sarah@apexlogistics.com"
+                placeholder="jane@company.com"
                 className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
-              Organization / Facility Name
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text">
+                Organization / Facility Name
+              </label>
+              <span className="text-[10px] text-brand-forest/50 dark:text-brand-dark-muted">Optional</span>
+            </div>
             <div className="relative">
               <Building className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
               <input
                 type="text"
                 value={orgName}
                 onChange={e => setOrgName(e.target.value)}
-                placeholder="Apex Logistics & Warehousing"
+                placeholder="e.g. Acme Industrial Services"
                 className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
               />
             </div>
+            <p className="mt-1 text-[10px] text-brand-forest/50 dark:text-brand-dark-muted">
+              Enter to create or join a shared team workspace.
+            </p>
           </div>
 
           <div>
@@ -152,7 +230,7 @@ export const Register: React.FC = () => {
           </div>
 
           <Button type="submit" variant="primary" className="w-full" isLoading={isLoading} disabled={!isPasswordValid}>
-            <span>Create Organization & Admin</span>
+            <span>Create Account as {role}</span>
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </form>

@@ -67,29 +67,59 @@ def register(
     db.add(user)
     db.flush()
 
-    # 4. Handle organization creation or onboarding
-    org_name = data.organization_name or f"{data.full_name}'s Team"
-    base_slug = create_slug(org_name)
-    slug = base_slug
-    counter = 1
-    while db.query(Organization).filter(Organization.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
+    # 4. Determine role & title
+    valid_roles = ["Admin", "Manager", "Technician", "Customer"]
+    if data.role and data.role in valid_roles:
+        user_role = data.role
+    elif data.organization_name and data.organization_name.strip():
+        user_role = "Admin"
+    else:
+        user_role = "Customer"
+    title_map = {
+        "Admin": "Organization Administrator",
+        "Manager": "Operations & Maintenance Manager",
+        "Technician": "Field Service Technician",
+        "Customer": "Requester / Client"
+    }
 
-    org = Organization(
-        name=org_name,
-        slug=slug,
-        is_active=True
-    )
-    db.add(org)
-    db.flush()
+    # Handle organization creation or onboarding
+    org = None
+    if data.organization_name and data.organization_name.strip():
+        req_name = data.organization_name.strip()
+        org = db.query(Organization).filter(
+            (Organization.name.ilike(req_name)) | (Organization.slug == create_slug(req_name))
+        ).first()
+        if not org:
+            base_slug = create_slug(req_name)
+            slug = base_slug
+            counter = 1
+            while db.query(Organization).filter(Organization.slug == slug).first():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            org = Organization(name=req_name, slug=slug, is_active=True)
+            db.add(org)
+            db.flush()
+    else:
+        # Check if an active organization already exists to attach to
+        org = db.query(Organization).filter(Organization.is_active == True).first()
+        if not org:
+            org_name = f"{data.full_name}'s Organization"
+            base_slug = create_slug(org_name)
+            slug = base_slug
+            counter = 1
+            while db.query(Organization).filter(Organization.slug == slug).first():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            org = Organization(name=org_name, slug=slug, is_active=True)
+            db.add(org)
+            db.flush()
 
-    # First creator is Admin
+    # Create membership with the user's chosen role
     membership = Membership(
         user_id=user.id,
         organization_id=org.id,
-        role="Admin",
-        title="Organization Administrator",
+        role=user_role,
+        title=title_map.get(user_role, "Team Member"),
         is_active=True
     )
     db.add(membership)
@@ -101,7 +131,7 @@ def register(
         entity_type="AUTH",
         entity_id=user.id,
         action="USER_REGISTERED",
-        details=f"User {user.email} registered and created organization {org.name}",
+        details=f"User {user.email} registered as {user_role} in organization {org.name}",
         ip_address=request.client.host if request.client else None
     )
     db.add(audit)
