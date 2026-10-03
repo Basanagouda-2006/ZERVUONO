@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: zervuno-backend
+    runtime: python
+    buildCommand: "pip install -r backend/requirements.txt && alembic -c backend/alembic.ini upgrade head"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ENVIRONMENT
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SEED_DEMO_DATA
+        value: "false"

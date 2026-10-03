@@ -15,12 +15,13 @@ from app.api.v1 import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables exist and seed demo organization
+    # Startup: ensure tables exist
     try:
         init_tables()
-        seed_database()
+        if settings.SEED_DEMO_DATA:
+            seed_database()
     except Exception as e:
-        print(f"Startup warning during table/seed initialization: {e}")
+        print(f"Startup warning during table initialization: {e}")
     yield
     # Shutdown
     pass

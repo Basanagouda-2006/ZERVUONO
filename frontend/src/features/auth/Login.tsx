@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Logo } from '../../components/ui/Logo';
-import { Lock, Mail, AlertCircle, ArrowRight, UserCheck } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -34,11 +34,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('Password123!');
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white dark:bg-brand-dark-card p-8 sm:p-10 rounded-3xl border border-brand-evergreen/10 dark:border-brand-dark-border shadow-card">
@@ -50,48 +45,6 @@ export const Login: React.FC = () => {
           <p className="mt-2 text-xs text-brand-forest/60 dark:text-brand-dark-muted">
             Maintenance operations platform for connected teams
           </p>
-        </div>
-
-        {/* Quick Demo Switcher Pills */}
-        <div className="p-3.5 rounded-2xl bg-brand-ivory/60 dark:bg-brand-dark-bg border border-brand-evergreen/10 dark:border-brand-dark-border">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-brand-forest/70 dark:text-brand-dark-muted mb-2 flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-brand-jade" />
-            <span>1-Click Demo Profiles</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('manager@zervuno.com')}
-              className="px-2.5 py-1.5 text-left rounded-lg bg-white dark:bg-brand-dark-card border border-brand-evergreen/10 hover:border-brand-jade transition-colors"
-            >
-              <div className="font-bold text-brand-evergreen dark:text-brand-mint">Manager</div>
-              <div className="text-[10px] text-brand-forest/60 truncate">David Miller</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('tech@zervuno.com')}
-              className="px-2.5 py-1.5 text-left rounded-lg bg-white dark:bg-brand-dark-card border border-brand-evergreen/10 hover:border-brand-jade transition-colors"
-            >
-              <div className="font-bold text-brand-evergreen dark:text-brand-mint">Technician</div>
-              <div className="text-[10px] text-brand-forest/60 truncate">Alex Vance</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('customer@zervuno.com')}
-              className="px-2.5 py-1.5 text-left rounded-lg bg-white dark:bg-brand-dark-card border border-brand-evergreen/10 hover:border-brand-jade transition-colors"
-            >
-              <div className="font-bold text-brand-evergreen dark:text-brand-mint">Customer</div>
-              <div className="text-[10px] text-brand-forest/60 truncate">Elena Rostova</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@zervuno.com')}
-              className="px-2.5 py-1.5 text-left rounded-lg bg-white dark:bg-brand-dark-card border border-brand-evergreen/10 hover:border-brand-jade transition-colors"
-            >
-              <div className="font-bold text-brand-evergreen dark:text-brand-mint">Admin</div>
-              <div className="text-[10px] text-brand-forest/60 truncate">Sarah Jenkins</div>
-            </button>
-          </div>
         </div>
 
         {error && (

@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Zervuno <notifications@zervuno.com>"
 
+    # Demo Data Seeding (false by default for clean production)
+    SEED_DEMO_DATA: bool = False
+
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
@@ -57,12 +60,12 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     def assemble_db_connection(cls, v: str | None) -> str:
         if not v:
-            return "postgresql+psycopg://postgres:postgres@localhost:5432/zervuno"
-        # If user provides standard postgresql:// (e.g. from Neon), transform to postgresql+psycopg://
+            return "postgresql+psycopg2://postgres:postgres@localhost:5432/zervuno"
+        # If user provides standard postgresql:// (e.g. from Neon or Render), transform to postgresql+psycopg2://
         if v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql+psycopg://", 1)
+            return v.replace("postgres://", "postgresql+psycopg2://", 1)
         if v.startswith("postgresql://") and not v.startswith("postgresql+"):
-            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+            return v.replace("postgresql://", "postgresql+psycopg2://", 1)
         return v
 
 settings = Settings()
