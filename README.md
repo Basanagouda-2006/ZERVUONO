@@ -129,7 +129,44 @@ Open your browser to: `http://localhost:3000/`
 
 ---
 
-## 5. Verification & Test Suite Execution
+## 5. Running in Visual Studio Code (VS Code)
+
+The repository comes pre-configured with a `.vscode/` setup for 1-click execution, debugging, and terminal automation.
+
+### Option A: 1-Click Launch via VS Code Tasks (Recommended)
+1. Open the project root folder (`d:\ZENVURO`) in VS Code:
+   ```powershell
+   code d:\ZENVURO
+   ```
+2. Press **`Ctrl + Shift + B`** (or go to `Terminal` -> `Run Build Task...`).
+3. Select **`Run Full Stack (Backend + Frontend)`**.
+   - This starts both the FastAPI backend (`http://localhost:8000`) and Vite frontend (`http://localhost:3000`) in parallel inside dedicated VS Code terminal tabs.
+
+### Option B: Interactive Debugger (F5)
+1. Open the **Run and Debug** panel on the left sidebar (`Ctrl + Shift + D`).
+2. In the dropdown at the top, choose:
+   - **`Full Stack (Debug Backend + Frontend)`** to automatically start the frontend server and attach the Python debugger to FastAPI.
+   - Or **`Debug Backend (FastAPI)`** to debug API endpoints and step through route handlers with breakpoints.
+3. Press **`F5`**.
+
+### Option C: Integrated Split Terminal
+1. Open the Integrated Terminal in VS Code: **`Ctrl + ~`** (or `Terminal` -> `New Terminal`).
+2. Split the terminal into two panes (`Ctrl + Shift + 5` or click the split terminal icon).
+3. In **Pane 1 (Backend)**:
+   ```powershell
+   cd backend
+   .\.venv\Scripts\Activate.ps1
+   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+4. In **Pane 2 (Frontend)**:
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+
+---
+
+## 6. Verification & Test Suite Execution
 
 Both frontend and backend include automated test suites.
 
@@ -169,7 +206,7 @@ Tests: 3 passed (3)
 
 ---
 
-## 6. Neon Cloud PostgreSQL Setup
+## 7. Neon Cloud PostgreSQL Setup
 
 To connect to Neon:
 1. Create a database on [Neon.tech](https://neon.tech).
@@ -187,7 +224,7 @@ To connect to Neon:
 
 ---
 
-## 7. Production Deployment Guide
+## 8. Production Deployment Guide
 
 ### Deploy Backend (Render / Railway)
 1. Link your GitHub repository to Render / Railway.
@@ -206,7 +243,7 @@ To connect to Neon:
 
 ---
 
-## 8. Security & Compliance Implementation
+## 9. Security & Compliance Implementation
 
 - **Strict Multi-Tenant Scoping**: All database queries enforce `organization_id` ownership derived from server-validated memberships, preventing cross-tenant data leakage.
 - **Argon2id Password Hashing**: State-of-the-art memory-hard hashing protects user credentials against GPU cracking attacks.
