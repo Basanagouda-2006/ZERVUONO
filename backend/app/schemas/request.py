@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from app.schemas.user import UserResponse
 from app.schemas.location import LocationResponse
 from app.schemas.asset import AssetResponse
@@ -14,9 +14,7 @@ class AttachmentResponse(BaseModel):
     attachment_type: str
     created_at: datetime
     uploaded_by_id: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WorkLogCreate(BaseModel):
     diagnosis: Optional[str] = None
@@ -32,9 +30,7 @@ class WorkLogResponse(BaseModel):
     hours_spent: float
     created_at: datetime
     technician: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MaterialUsageCreate(BaseModel):
     item_name: str
@@ -51,9 +47,7 @@ class MaterialUsageResponse(BaseModel):
     unit: str
     cost: Optional[float] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class FeedbackCreate(BaseModel):
     rating: int = Field(..., ge=1, le=5)
@@ -67,9 +61,7 @@ class FeedbackResponse(BaseModel):
     comments: Optional[str] = None
     created_at: datetime
     customer: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class StatusHistoryResponse(BaseModel):
     id: str
@@ -81,9 +73,7 @@ class StatusHistoryResponse(BaseModel):
     comment: Optional[str] = None
     created_at: datetime
     actor: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MaintenanceRequestCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
@@ -153,6 +143,4 @@ class MaintenanceRequestResponse(BaseModel):
     materials: Optional[List[MaterialUsageResponse]] = []
     status_history: Optional[List[StatusHistoryResponse]] = []
     feedback: Optional[FeedbackResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

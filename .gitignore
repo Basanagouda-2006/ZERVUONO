@@ -58,3 +58,22 @@ dist-ssr/
 backend/uploads/
 uploads/
 storage/
+# Secrets and credentials
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Test and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Local editor and OS files
+Thumbs.db

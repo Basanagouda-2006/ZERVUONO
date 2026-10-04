@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
   Wrench,
@@ -29,6 +29,7 @@ import { apiRequest } from '../../lib/api';
 export const TechnicianDashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedReqId = searchParams.get('request');
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'active' | 'assigned' | 'completed'>('active');
   const [activeWorkLogId, setActiveWorkLogId] = useState<string | null>(null);
@@ -213,7 +214,7 @@ export const TechnicianDashboard: React.FC = () => {
                       size="sm"
                       onClick={async () => {
                         await apiRequest(`/requests/${job.id}/accept`, { method: 'POST' });
-                        window.location.reload();
+                        await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
                       }}
                     >
                       <Check className="w-3.5 h-3.5 mr-1" /> Accept Job
@@ -226,7 +227,7 @@ export const TechnicianDashboard: React.FC = () => {
                       size="sm"
                       onClick={async () => {
                         await apiRequest(`/requests/${job.id}/start`, { method: 'POST' });
-                        window.location.reload();
+                        await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
                       }}
                     >
                       <Play className="w-3.5 h-3.5 mr-1" /> Start Work

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.db.session import get_db
 from app.models.organization import Membership
@@ -23,9 +23,7 @@ class AuditEventResponse(BaseModel):
     ip_address: Optional[str] = None
     created_at: datetime
     actor: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 @router.get("/", response_model=List[AuditEventResponse])
 def list_audit_events(

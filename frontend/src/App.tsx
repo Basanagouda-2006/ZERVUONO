@@ -22,7 +22,7 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <div className="min-h-screen flex flex-col bg-brand-ivory dark:bg-brand-dark-bg text-brand-forest dark:text-brand-dark-text transition-colors duration-200">
               <Navbar />
               <main className="flex-1">

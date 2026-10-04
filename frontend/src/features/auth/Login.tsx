@@ -100,13 +100,41 @@ export const Login: React.FC = () => {
           </Button>
         </form>
 
-        <div className="text-center pt-2">
+        <div className="text-center pt-1">
           <p className="text-xs text-brand-forest/70 dark:text-brand-dark-muted">
             New organization?{' '}
             <Link to="/register" className="font-semibold text-brand-jade hover:underline">
               Create an account
             </Link>
           </p>
+        </div>
+
+        {/* Quick Demo Credentials for Fast Evaluation */}
+        <div className="pt-4 border-t border-brand-evergreen/10 dark:border-brand-dark-border">
+          <p className="text-[10px] font-bold text-brand-forest/60 dark:text-brand-dark-muted mb-2.5 text-center uppercase tracking-wider">
+            Quick Demo Accounts (Password: Password123!)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { role: 'Admin', email: 'admin@zervuno.com' },
+              { role: 'Manager', email: 'manager@zervuno.com' },
+              { role: 'Technician', email: 'tech@zervuno.com' },
+              { role: 'Customer', email: 'customer@zervuno.com' },
+            ].map(demo => (
+              <button
+                key={demo.role}
+                type="button"
+                onClick={() => {
+                  setEmail(demo.email);
+                  setPassword('Password123!');
+                }}
+                className="px-2.5 py-1.5 text-[11px] font-medium rounded-lg border border-brand-evergreen/15 dark:border-brand-dark-border hover:bg-brand-mint/20 dark:hover:bg-brand-mint/10 text-brand-forest dark:text-brand-mint transition-colors text-left flex items-center justify-between"
+              >
+                <span>{demo.role}</span>
+                <span className="text-[9px] text-brand-forest/40 dark:text-brand-dark-muted">Fill</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

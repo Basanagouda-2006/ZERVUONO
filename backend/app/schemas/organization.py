@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from app.schemas.user import UserResponse
 
 class OrganizationCreate(BaseModel):
@@ -23,9 +23,7 @@ class OrganizationResponse(BaseModel):
     logo_url: Optional[str] = None
     is_active: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MembershipResponse(BaseModel):
     id: str
@@ -37,9 +35,7 @@ class MembershipResponse(BaseModel):
     is_active: bool
     joined_at: datetime
     user: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InvitationCreate(BaseModel):
     email: EmailStr
@@ -54,9 +50,7 @@ class InvitationResponse(BaseModel):
     status: str
     expires_at: datetime
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AcceptInvitationRequest(BaseModel):
     token: str

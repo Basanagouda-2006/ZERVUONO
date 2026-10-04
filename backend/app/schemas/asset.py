@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from app.schemas.location import LocationResponse
 
 class AssetCreate(BaseModel):
@@ -48,6 +48,4 @@ class AssetResponse(BaseModel):
     notes: Optional[str] = None
     created_at: datetime
     location: Optional[LocationResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

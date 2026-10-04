@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
   MapPin,
@@ -42,6 +42,7 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
   onOpenAITroubleshoot,
 }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const { data: request, isLoading, error } = useQuery<MaintenanceRequest>({
@@ -119,7 +120,8 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
                   size="sm"
                   onClick={async () => {
                     await apiRequest(`/requests/${request.id}/accept`, { method: 'POST' });
-                    window.location.reload();
+                    await queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+                    queryClient.invalidateQueries({ queryKey: ['requests'] });
                   }}
                 >
                   Accept Assignment
@@ -131,7 +133,8 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
                   size="sm"
                   onClick={async () => {
                     await apiRequest(`/requests/${request.id}/start`, { method: 'POST' });
-                    window.location.reload();
+                    await queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+                    queryClient.invalidateQueries({ queryKey: ['requests'] });
                   }}
                 >
                   Start Work On-Site

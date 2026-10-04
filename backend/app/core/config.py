@@ -62,10 +62,44 @@ class Settings(BaseSettings):
         if not v:
             return "postgresql+psycopg2://postgres:postgres@localhost:5432/zervuno"
         # If user provides standard postgresql:// (e.g. from Neon or Render), transform to postgresql+psycopg2://
-        if v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql+psycopg2://", 1)
-        if v.startswith("postgresql://") and not v.startswith("postgresql+"):
-            return v.replace("postgresql://", "postgresql+psycopg2://", 1)
-        return v
+        url = v
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+        # Ensure reliable DNS resolution for cloud-hosted databases (e.g. Neon, AWS RDS)
+        try:
+            import socket
+            import urllib.parse
+            parsed = urllib.parse.urlsplit(url)
+            hostname = parsed.hostname
+            if hostname and hostname not in ("localhost", "127.0.0.1") and not hostname.replace(".", "").isdigit():
+                query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+                if "hostaddr" not in query_params:
+                    # Test if system DNS can resolve it
+                    need_fallback = False
+                    try:
+                        socket.gethostbyname(hostname)
+                    except Exception:
+                        need_fallback = True
+
+                    if need_fallback:
+                        try:
+                            import dns.resolver
+                            resolver = dns.resolver.Resolver()
+                            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+                            answers = resolver.resolve(hostname, "A")
+                            for rdata in answers:
+                                query_params["hostaddr"] = [rdata.to_text()]
+                                break
+                            new_query = urllib.parse.urlencode(query_params, doseq=True)
+                            url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+                        except Exception as dns_err:
+                            print(f"Fallback DNS resolution failed for {hostname}: {dns_err}")
+        except Exception:
+            pass
+
+        return url
 
 settings = Settings()

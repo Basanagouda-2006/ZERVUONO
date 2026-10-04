@@ -37,4 +37,78 @@ describe('Zervuno Frontend Core Logic', () => {
     expect(validRoles).toContain('Customer');
     expect(validRoles).toHaveLength(4);
   });
+
+  it('handles API errors cleanly without body stream read crashes', async () => {
+    const { apiRequest, ApiError } = await import('../lib/api');
+
+    // Mock fetch with a 401 JSON error
+    global.fetch = async () => ({
+      ok: false,
+      status: 401,
+      text: async () => JSON.stringify({ detail: 'Incorrect email or password.' }),
+    } as any);
+
+    try {
+      await apiRequest('/auth/login', { method: 'POST' });
+      expect.fail('Should have thrown an error');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.status).toBe(401);
+      expect(err.message).toBe('Incorrect email or password.');
+    }
+
+    // Mock fetch with a 500 non-JSON plain text error
+    global.fetch = async () => ({
+      ok: false,
+      status: 500,
+      text: async () => 'Internal Server Error (Database Connection Failed)',
+    } as any);
+
+    try {
+      await apiRequest('/auth/register', { method: 'POST' });
+      expect.fail('Should have thrown an error');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.status).toBe(500);
+      expect(err.message).toBe('Internal Server Error (Database Connection Failed)');
+    }
+  });
+
+  it('injects Authorization and X-Organization-Id headers when session is present', async () => {
+    const { apiRequest, setAuthToken, setCurrentOrgId } = await import('../lib/api');
+    setAuthToken('valid-jwt-token-xyz');
+    setCurrentOrgId('org-uuid-1234');
+
+    let capturedHeaders: Headers | null = null;
+    global.fetch = async (_url: any, options: any) => {
+      capturedHeaders = options.headers;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ success: true }),
+      } as any;
+    };
+
+    const res = await apiRequest('/requests/');
+    expect(res).toEqual({ success: true });
+    expect(capturedHeaders).not.toBeNull();
+    expect(capturedHeaders!.get('Authorization')).toBe('Bearer valid-jwt-token-xyz');
+    expect(capturedHeaders!.get('X-Organization-Id')).toBe('org-uuid-1234');
+
+    setAuthToken(null);
+    setCurrentOrgId(null);
+  });
+
+  it('handles 204 No Content responses gracefully without parsing error', async () => {
+    const { apiRequest } = await import('../lib/api');
+
+    global.fetch = async () => ({
+      ok: true,
+      status: 204,
+      text: async () => '',
+    } as any);
+
+    const res = await apiRequest('/requests/123/cancel', { method: 'POST' });
+    expect(res).toEqual({});
+  });
 });

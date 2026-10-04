@@ -68,3 +68,47 @@ def test_register_all_roles(client):
         )
         assert login_res.status_code == 200
         assert login_res.json()["user"]["role"] == role
+
+def test_get_current_user_unauthenticated(client):
+    """Calling /auth/me without a token or session must return HTTP 401 Unauthorized."""
+    client.cookies.clear()
+    res = client.get("/api/v1/auth/me")
+    assert res.status_code == 401
+    assert "Authentication required" in res.json().get("detail", "")
+
+def test_get_current_user_authenticated(client):
+    """Calling /auth/me with a valid Bearer token returns the user details."""
+    unique_email = f"auth_me_{uuid.uuid4().hex[:6]}@example.com"
+    reg = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": unique_email,
+            "password": "SecurePassword123!",
+            "full_name": "Me Tester",
+            "organization_name": "Me Testing Org",
+            "role": "Manager"
+        }
+    )
+    token = reg.json()["access_token"]
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["email"] == unique_email
+    assert data["role"] == "Manager"
+
+def test_logout_flow(client):
+    """Calling /auth/logout with a valid token returns 200 and removes cookie."""
+    unique_email = f"logout_{uuid.uuid4().hex[:6]}@example.com"
+    reg = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": unique_email,
+            "password": "SecurePassword123!",
+            "full_name": "Logout Tester",
+            "role": "Customer"
+        }
+    )
+    token = reg.json()["access_token"]
+    res = client.post("/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+    assert "Successfully logged out" in res.json()["message"]

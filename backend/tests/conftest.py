@@ -13,21 +13,12 @@ def setup_test_data():
     init_tables()
     seed_database()
     yield
-    # Clean up after test session completes to keep database completely clean
-    with engine.connect() as conn:
-        tables = [
-            'audit_events', 'feedbacks', 'material_usages', 'work_logs',
-            'attachments', 'request_status_history', 'preventive_plans',
-            'maintenance_requests', 'notifications', 'invitations',
-            'memberships', 'assets', 'locations', 'token_records',
-            'user_sessions', 'organizations', 'users'
-        ]
-        for t in tables:
-            try:
-                conn.execute(text(f"TRUNCATE TABLE {t} CASCADE"))
-            except Exception:
-                pass
-        conn.commit()
+    # Clean up dynamic test accounts after test session while preserving base seed accounts
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("DELETE FROM users WHERE email LIKE '%@example.com'"))
+        except Exception:
+            pass
 
 @pytest.fixture(scope="session")
 def client():

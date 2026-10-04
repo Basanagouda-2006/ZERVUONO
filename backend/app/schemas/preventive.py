@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from app.schemas.asset import AssetResponse
 from app.schemas.location import LocationResponse
 from app.schemas.user import UserResponse
@@ -44,6 +44,4 @@ class PreventivePlanResponse(BaseModel):
     asset: Optional[AssetResponse] = None
     location: Optional[LocationResponse] = None
     assigned_technician: Optional[UserResponse] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

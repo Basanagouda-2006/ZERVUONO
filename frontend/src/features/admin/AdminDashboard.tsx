@@ -26,6 +26,7 @@ export const AdminDashboard: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Technician');
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [generatedInvite, setGeneratedInvite] = useState<{ email: string; token: string; role: string } | null>(null);
 
   // Queries
   const { data: members = [] } = useQuery<Membership[]>({
@@ -58,9 +59,8 @@ export const AdminDashboard: React.FC = () => {
       }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invitations'] });
-      setInviteModalOpen(false);
+      setGeneratedInvite({ email: inviteEmail, token: data.token, role: inviteRole });
       setInviteEmail('');
-      alert(`Invitation generated! Token: ${data.token}`);
     },
   });
 
@@ -298,57 +298,110 @@ export const AdminDashboard: React.FC = () => {
       {/* Invite Modal */}
       <Modal
         isOpen={inviteModalOpen}
-        onClose={() => setInviteModalOpen(false)}
-        title="Invite Team Member"
-        subtitle="Provision access for Customer, Technician, Manager, or Admin"
+        onClose={() => {
+          setInviteModalOpen(false);
+          setGeneratedInvite(null);
+        }}
+        title={generatedInvite ? "Invitation Ready" : "Invite Team Member"}
+        subtitle={
+          generatedInvite
+            ? `Share this activation link with ${generatedInvite.email}`
+            : "Provision access for Customer, Technician, Manager, or Admin"
+        }
         maxWidth="md"
       >
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            inviteMutation.mutate();
-          }}
-          className="space-y-4"
-        >
-          <div>
-            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
-              Colleague Email Address *
-            </label>
-            <input
-              type="email"
-              required
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              placeholder="technician@company.com"
-              className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 outline-none"
-            />
-          </div>
+        {generatedInvite ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-brand-mint/20 border border-brand-jade/30 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-evergreen dark:text-brand-mint">
+                <CheckCircle2 className="w-4 h-4 text-brand-jade" />
+                <span>Invitation created for {generatedInvite.email} ({generatedInvite.role})</span>
+              </div>
+              <p className="text-[11px] text-brand-forest/70 dark:text-brand-dark-muted">
+                Send this link directly to the invited colleague to let them complete account setup:
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/accept-invitation?token=${generatedInvite.token}`}
+                  className="flex-1 px-3 py-2 text-[11px] font-mono rounded-lg border border-brand-evergreen/20 bg-white dark:bg-brand-dark-bg select-all outline-none"
+                />
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/accept-invitation?token=${generatedInvite.token}`);
+                    setCopiedToken(generatedInvite.token);
+                    setTimeout(() => setCopiedToken(null), 3000);
+                  }}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1" />
+                  {copiedToken === generatedInvite.token ? 'Copied!' : 'Copy Link'}
+                </Button>
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
-              Select Role
-            </label>
-            <select
-              value={inviteRole}
-              onChange={e => setInviteRole(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 outline-none"
-            >
-              <option value="Technician">Technician — Field repairs, mobile logs, work evidence</option>
-              <option value="Manager">Manager — Dispatch, review, assignments, workload</option>
-              <option value="Customer">Customer — Report issues, track status, verify fixes</option>
-              <option value="Admin">Admin — Full organization settings, user invitations</option>
-            </select>
+            <div className="pt-2 flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setGeneratedInvite(null);
+                  setInviteModalOpen(false);
+                }}
+              >
+                Done
+              </Button>
+            </div>
           </div>
+        ) : (
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              inviteMutation.mutate();
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+                Colleague Email Address *
+              </label>
+              <input
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="technician@company.com"
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+              />
+            </div>
 
-          <div className="pt-2 flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={() => setInviteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" isLoading={inviteMutation.isPending}>
-              Generate Invitation
-            </Button>
-          </div>
-        </form>
+            <div>
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+                Select Role
+              </label>
+              <select
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+              >
+                <option value="Technician">Technician — Field repairs, mobile logs, work evidence</option>
+                <option value="Manager">Manager — Dispatch, review, assignments, workload</option>
+                <option value="Customer">Customer — Report issues, track status, verify fixes</option>
+                <option value="Admin">Admin — Full organization settings, user invitations</option>
+              </select>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => setInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={inviteMutation.isPending}>
+                Generate Invitation
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
