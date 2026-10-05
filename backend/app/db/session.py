@@ -15,6 +15,9 @@ if settings.DATABASE_URL.startswith("sqlite"):
 else:
     engine_args["pool_size"] = 10
     engine_args["max_overflow"] = 20
+    if "pg8000" in settings.DATABASE_URL:
+        import ssl
+        engine_args.setdefault("connect_args", {})["ssl_context"] = ssl.create_default_context()
 
 engine = create_engine(settings.DATABASE_URL, **engine_args)
 

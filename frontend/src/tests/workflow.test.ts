@@ -111,4 +111,24 @@ describe('Zervuno Frontend Core Logic', () => {
     const res = await apiRequest('/requests/123/cancel', { method: 'POST' });
     expect(res).toEqual({});
   });
+
+  it('targets the configured API base URL with /api/v1 prefix for auth routes', async () => {
+    const { apiRequest } = await import('../lib/api');
+
+    let capturedUrls: string[] = [];
+    global.fetch = async (url: any) => {
+      capturedUrls.push(url.toString());
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ status: 'ok' }),
+      } as any;
+    };
+
+    await apiRequest('/auth/me');
+    await apiRequest('/auth/register', { method: 'POST' });
+
+    expect(capturedUrls[0]).toContain('/api/v1/auth/me');
+    expect(capturedUrls[1]).toContain('/api/v1/auth/register');
+  });
 });

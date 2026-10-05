@@ -1,4 +1,9 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const rawBase =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://zervono-api.onrender.com' : '');
+
+const API_BASE = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
 const BASE_URL = `${API_BASE}/api/v1`;
 
 let authToken: string | null = null;

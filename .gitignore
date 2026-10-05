@@ -64,6 +64,7 @@ storage/
 .env.*
 !.env.example
 !.env.*.example
+!frontend/.env.production
 *.pem
 *.key
 

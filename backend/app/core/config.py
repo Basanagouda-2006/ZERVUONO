@@ -55,18 +55,53 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://zervuono.vercel.app",
     ]
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, (list, str)):
+            return v
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://zervuono.vercel.app",
+        ]
 
     @field_validator("DATABASE_URL", mode="before")
     def assemble_db_connection(cls, v: str | None) -> str:
         if not v:
             return "postgresql+psycopg2://postgres:postgres@localhost:5432/zervuno"
-        # If user provides standard postgresql:// (e.g. from Neon or Render), transform to postgresql+psycopg2://
+        
+        # Determine available driver: prefer psycopg2, gracefully fallback to pure-Python pg8000
+        driver = "psycopg2"
+        try:
+            import psycopg2
+        except Exception:
+            driver = "pg8000"
+
         url = v
         if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+            url = url.replace("postgres://", f"postgresql+{driver}://", 1)
         elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
-            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            url = url.replace("postgresql://", f"postgresql+{driver}://", 1)
+        elif url.startswith("postgresql+psycopg2://") and driver == "pg8000":
+            url = url.replace("postgresql+psycopg2://", "postgresql+pg8000://", 1)
+
+        # For pg8000, strip libpq-specific parameters from query string
+        if driver == "pg8000" and "?" in url:
+            import urllib.parse
+            parsed_p = urllib.parse.urlsplit(url)
+            q_dict = urllib.parse.parse_qs(parsed_p.query)
+            # Remove libpq parameters that pg8000 does not understand
+            q_dict.pop("sslmode", None)
+            q_dict.pop("channel_binding", None)
+            new_q = urllib.parse.urlencode(q_dict, doseq=True)
+            url = urllib.parse.urlunsplit((parsed_p.scheme, parsed_p.netloc, parsed_p.path, new_q, parsed_p.fragment))
 
         # Ensure reliable DNS resolution for cloud-hosted databases (e.g. Neon, AWS RDS)
         try:
