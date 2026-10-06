@@ -23,6 +23,9 @@ import { Button } from '../../components/ui/Button';
 import { apiRequest, getFileUrl } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { VerifyModal } from '../customer/VerifyModal';
+import { WorkLogModal } from '../technician/WorkLogModal';
+import { CompleteJobModal } from '../technician/CompleteJobModal';
+import { AITroubleshootDrawer } from '../technician/AITroubleshootDrawer';
 
 interface RequestDetailViewProps {
   requestId: string;
@@ -44,6 +47,24 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [internalWorkLogOpen, setInternalWorkLogOpen] = useState(false);
+  const [internalCompleteOpen, setInternalCompleteOpen] = useState(false);
+  const [internalTroubleshootOpen, setInternalTroubleshootOpen] = useState(false);
+
+  const handleOpenWorkLog = () => {
+    if (onOpenWorkLog) onOpenWorkLog();
+    else setInternalWorkLogOpen(true);
+  };
+
+  const handleOpenComplete = () => {
+    if (onOpenComplete) onOpenComplete();
+    else setInternalCompleteOpen(true);
+  };
+
+  const handleOpenTroubleshoot = () => {
+    if (onOpenAITroubleshoot) onOpenAITroubleshoot();
+    else setInternalTroubleshootOpen(true);
+  };
 
   const { data: request, isLoading, error } = useQuery<MaintenanceRequest>({
     queryKey: ['request', requestId],
@@ -112,6 +133,20 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
           )}
 
           {/* Technician Actions */}
+          {isTechnician && !request.assigned_technician_id && ['Submitted', 'Under Review'].includes(request.status) && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={async () => {
+                await apiRequest(`/requests/${request.id}/claim`, { method: 'POST' });
+                await queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+                queryClient.invalidateQueries({ queryKey: ['requests'] });
+              }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Claim & Accept Job
+            </Button>
+          )}
+
           {isTechnician && isAssignedToMe && (
             <>
               {request.status === 'Assigned' && (
@@ -140,19 +175,21 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
                   Start Work On-Site
                 </Button>
               )}
-              {request.status === 'In Progress' && (
-                <>
-                  <Button variant="outline" size="sm" onClick={onOpenAITroubleshoot}>
-                    <Sparkles className="w-3.5 h-3.5 mr-1 text-brand-jade" /> AI Troubleshoot
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={onOpenWorkLog}>
-                    <Wrench className="w-3.5 h-3.5 mr-1" /> Log Work / Parts
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={onOpenComplete}>
-                    Submit Completion
-                  </Button>
-                </>
-              )}
+            </>
+          )}
+
+          {/* Work Logging & Resolution Submission (for assigned technician or manager) */}
+          {((isTechnician && isAssignedToMe) || isManager) && ['In Progress', 'Reopened'].includes(request.status) && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleOpenTroubleshoot}>
+                <Sparkles className="w-3.5 h-3.5 mr-1 text-brand-jade" /> AI Troubleshoot
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleOpenWorkLog}>
+                <Wrench className="w-3.5 h-3.5 mr-1" /> Log Work / Parts
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleOpenComplete}>
+                Submit Completion
+              </Button>
             </>
           )}
 
@@ -459,6 +496,29 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
         onClose={() => setVerifyModalOpen(false)}
         request={request}
       />
+
+      {/* Internal Technician Modals Fallback */}
+      {internalWorkLogOpen && (
+        <WorkLogModal
+          isOpen={internalWorkLogOpen}
+          onClose={() => setInternalWorkLogOpen(false)}
+          requestId={requestId}
+        />
+      )}
+      {internalCompleteOpen && (
+        <CompleteJobModal
+          isOpen={internalCompleteOpen}
+          onClose={() => setInternalCompleteOpen(false)}
+          requestId={requestId}
+        />
+      )}
+      {internalTroubleshootOpen && (
+        <AITroubleshootDrawer
+          isOpen={internalTroubleshootOpen}
+          onClose={() => setInternalTroubleshootOpen(false)}
+          requestId={requestId}
+        />
+      )}
     </div>
   );
 };

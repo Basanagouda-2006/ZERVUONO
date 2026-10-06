@@ -33,7 +33,7 @@ export const AdminDashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedReqId = searchParams.get('request');
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'requests' | 'members' | 'invitations' | 'audit' | 'org'>('requests');
+  const [activeTab, setActiveTab] = useState<'requests' | 'members' | 'invitations' | 'audit' | 'locations' | 'org'>('requests');
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [assigningReqId, setAssigningReqId] = useState<string | null>(null);
@@ -43,6 +43,14 @@ export const AdminDashboard: React.FC = () => {
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [generatedInvite, setGeneratedInvite] = useState<{ email: string; token: string; role: string } | null>(null);
 
+  // Facility Locations state
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [locName, setLocName] = useState('');
+  const [locBuilding, setLocBuilding] = useState('');
+  const [locFloor, setLocFloor] = useState('');
+  const [locRoom, setLocRoom] = useState('');
+  const [locAddress, setLocAddress] = useState('');
+
   // Queries
   const { data: requests = [], isLoading: requestsLoading } = useQuery<MaintenanceRequest[]>({
     queryKey: ['requests', 'admin', statusFilter],
@@ -51,6 +59,35 @@ export const AdminDashboard: React.FC = () => {
         `/requests/${statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : ''}`
       ),
     refetchInterval: 15000,
+  });
+
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ['admin-locations'],
+    queryFn: () => apiRequest<Location[]>('/locations/'),
+  });
+
+  const locationMutation = useMutation({
+    mutationFn: () =>
+      apiRequest('/locations/', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: locName,
+          building: locBuilding || undefined,
+          floor: locFloor || undefined,
+          room: locRoom || undefined,
+          address: locAddress || undefined,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-locations'] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      setLocationModalOpen(false);
+      setLocName('');
+      setLocBuilding('');
+      setLocFloor('');
+      setLocRoom('');
+      setLocAddress('');
+    },
   });
 
   const { data: members = [] } = useQuery<Membership[]>({
@@ -178,6 +215,16 @@ export const AdminDashboard: React.FC = () => {
           }`}
         >
           <FileText className="w-4 h-4" /> Audit Log Trail
+        </button>
+        <button
+          onClick={() => setActiveTab('locations')}
+          className={`pb-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'locations'
+              ? 'border-brand-jade text-brand-evergreen dark:text-brand-mint font-bold'
+              : 'border-transparent text-brand-forest/60 hover:text-brand-forest'
+          }`}
+        >
+          <MapPin className="w-4 h-4" /> Facility Locations ({locations.length})
         </button>
         <button
           onClick={() => setActiveTab('org')}
@@ -461,6 +508,67 @@ export const AdminDashboard: React.FC = () => {
         </Card>
       )}
 
+      {/* TAB: LOCATIONS */}
+      {activeTab === 'locations' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-brand-evergreen dark:text-white">Facility Locations & Work Areas</h2>
+              <p className="text-xs text-brand-forest/70 dark:text-brand-dark-muted">
+                Predefine physical sites, buildings, floors, and rooms for maintenance routing
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<MapPin className="w-3.5 h-3.5" />}
+              onClick={() => setLocationModalOpen(true)}
+            >
+              Add Facility Location
+            </Button>
+          </div>
+
+          {locations.length === 0 ? (
+            <Card className="p-8 text-center space-y-3">
+              <MapPin className="w-10 h-10 text-brand-forest/30 mx-auto" />
+              <p className="text-xs font-semibold text-brand-forest/60">No locations added yet.</p>
+              <p className="text-[11px] text-brand-forest/50 max-w-sm mx-auto">
+                Locations help technicians and customers pinpoint exactly where equipment breakdowns or maintenance work are occurring.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocationModalOpen(true)}
+              >
+                Create First Location
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {locations.map(loc => (
+                <Card key={loc.id} className="p-4 space-y-2 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-brand-evergreen dark:text-white flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-brand-jade" />
+                      {loc.name}
+                    </h3>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
+                      Active
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-brand-forest/70 dark:text-brand-dark-muted space-y-0.5">
+                    {loc.building && <div><span className="font-medium">Building:</span> {loc.building}</div>}
+                    {loc.floor && <div><span className="font-medium">Floor:</span> {loc.floor}</div>}
+                    {loc.room && <div><span className="font-medium">Room/Bay:</span> {loc.room}</div>}
+                    {loc.address && <div className="text-[10px] text-brand-forest/50 truncate"><span className="font-medium">Address:</span> {loc.address}</div>}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Invite Modal */}
       <Modal
         isOpen={inviteModalOpen}
@@ -568,6 +676,98 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Location Modal */}
+      <Modal
+        isOpen={locationModalOpen}
+        onClose={() => setLocationModalOpen(false)}
+        title="Add Facility Location"
+        subtitle="Define physical areas, warehouses, or rooms for maintenance requests"
+        maxWidth="md"
+      >
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            locationMutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+              Location / Area Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={locName}
+              onChange={e => setLocName(e.target.value)}
+              placeholder="e.g. Loading Dock West, Plant Alpha"
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+                Building
+              </label>
+              <input
+                type="text"
+                value={locBuilding}
+                onChange={e => setLocBuilding(e.target.value)}
+                placeholder="Building B"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+                Floor
+              </label>
+              <input
+                type="text"
+                value={locFloor}
+                onChange={e => setLocFloor(e.target.value)}
+                placeholder="Level 2"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+                Room / Bay
+              </label>
+              <input
+                type="text"
+                value={locRoom}
+                onChange={e => setLocRoom(e.target.value)}
+                placeholder="Bay 14"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
+              Physical Address or Notes
+            </label>
+            <input
+              type="text"
+              value={locAddress}
+              onChange={e => setLocAddress(e.target.value)}
+              placeholder="e.g. 500 Industrial Parkway, North Entrance"
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-brand-evergreen/20 bg-brand-ivory/20 dark:bg-brand-dark-bg outline-none"
+            />
+          </div>
+
+          <div className="pt-2 flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setLocationModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" isLoading={locationMutation.isPending}>
+              Create Location
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {assigningReqId && (

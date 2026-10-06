@@ -88,19 +88,25 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
           <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1">
             Assign to Field Technician *
           </label>
-          <select
-            required
-            value={techId}
-            onChange={e => setTechId(e.target.value)}
-            className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
-          >
-            <option value="">Select available technician...</option>
-            {technicians.map(t => (
-              <option key={t.user_id} value={t.user_id}>
-                {t.user?.full_name} ({t.title || 'Technician'})
-              </option>
-            ))}
-          </select>
+          {technicians.length === 0 ? (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200">
+              No active technicians found in this organization yet. Invite a technician from Governance settings first.
+            </div>
+          ) : (
+            <select
+              required
+              value={techId}
+              onChange={e => setTechId(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
+            >
+              <option value="">Select available technician...</option>
+              {technicians.map(t => (
+                <option key={t.user_id} value={t.user_id}>
+                  {t.user?.full_name || t.user?.email} ({t.title || 'Technician'})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

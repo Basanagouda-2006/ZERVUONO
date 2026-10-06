@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import re
 
 from app.core.security import generate_random_token, get_password_hash, validate_password_strength
@@ -131,6 +131,7 @@ def get_organization_members(
 ):
     members = (
         db.query(Membership)
+        .options(joinedload(Membership.user))
         .filter(Membership.organization_id == membership.organization_id)
         .all()
     )
@@ -144,6 +145,7 @@ def get_organization_technicians(
     """Retrieve all technicians in the organization for task assignment."""
     technicians = (
         db.query(Membership)
+        .options(joinedload(Membership.user))
         .filter(
             Membership.organization_id == membership.organization_id,
             Membership.role == "Technician",

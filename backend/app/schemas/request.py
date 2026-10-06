@@ -81,6 +81,7 @@ class MaintenanceRequestCreate(BaseModel):
     category: str # HVAC, Electrical, Plumbing, Mechanical, IT, Safety, etc.
     priority: Optional[str] = "Medium"
     location_id: Optional[str] = None
+    location_name: Optional[str] = None
     location_details: Optional[str] = None
     asset_id: Optional[str] = None
 

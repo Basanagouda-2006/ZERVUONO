@@ -143,3 +143,126 @@ def test_reopen_workflow(client):
     assert reopen_resp.json()["status"] == "Reopened"
     assert reopen_resp.json()["reopen_count"] == 1
     assert "Still sticking" in reopen_resp.json()["reopen_reason"]
+
+def test_location_auto_creation_and_management(client):
+    customer_token = get_token(client, "customer@zervuno.com")
+    admin_token = get_token(client, "admin@zervuno.com")
+    cust_headers = {"Authorization": f"Bearer {customer_token}"}
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # 1. Admin creates a facility location directly
+    admin_loc_resp = client.post(
+        "/api/v1/locations/",
+        headers=admin_headers,
+        json={
+            "name": "Assembly Line Section 4",
+            "building": "Manufacturing Plant A",
+            "floor": "Ground Floor",
+            "room": "Bay 104"
+        }
+    )
+    assert admin_loc_resp.status_code == 201
+    created_loc = admin_loc_resp.json()
+    assert created_loc["name"] == "Assembly Line Section 4"
+
+    # 2. Customer creates a request specifying a new location_name on the fly
+    req_resp = client.post(
+        "/api/v1/requests/",
+        headers=cust_headers,
+        json={
+            "title": "Conveyor roller loose",
+            "description": "Bearing grinding noise heard during peak throughput",
+            "category": "Mechanical",
+            "location_name": "Packaging Depot North",
+            "priority": "Medium"
+        }
+    )
+    assert req_resp.status_code == 201
+    req_data = req_resp.json()
+    assert req_data["location"] is not None
+    assert req_data["location"]["name"] == "Packaging Depot North"
+
+    # 3. Both locations appear in the active locations list for this organization
+    locations_list = client.get("/api/v1/locations/", headers=cust_headers).json()
+    loc_names = [loc["name"] for loc in locations_list]
+    assert "Assembly Line Section 4" in loc_names
+    assert "Packaging Depot North" in loc_names
+
+def test_public_organizations_list(client):
+    resp = client.get("/api/v1/organizations/public-list")
+    assert resp.status_code == 200
+    orgs = resp.json()
+    assert isinstance(orgs, list)
+    assert len(orgs) > 0
+    assert "id" in orgs[0]
+    assert "name" in orgs[0]
+
+def test_technician_claim_and_complete_workflow(client):
+    customer_token = get_token(client, "customer@zervuno.com")
+    tech_token = get_token(client, "tech@zervuno.com")
+    cust_headers = {"Authorization": f"Bearer {customer_token}"}
+    tech_headers = {"Authorization": f"Bearer {tech_token}"}
+
+    # 1. Customer creates request in Submitted state
+    create_resp = client.post(
+        "/api/v1/requests/",
+        headers=cust_headers,
+        json={
+            "title": "Chilled water circulation pump whistling",
+            "description": "High pitched cavitation whistling under heavy cooling load",
+            "category": "HVAC",
+            "priority": "High"
+        }
+    )
+    assert create_resp.status_code == 201
+    req_id = create_resp.json()["id"]
+    assert create_resp.json()["status"] == "Submitted"
+
+    # 2. Technician claims the open request directly from queue
+    claim_resp = client.post(f"/api/v1/requests/{req_id}/claim", headers=tech_headers)
+    assert claim_resp.status_code == 200
+    claimed_req = claim_resp.json()
+    assert claimed_req["status"] == "Accepted"
+    assert claimed_req["assigned_technician"] is not None
+
+    # 3. Technician starts work
+    start_resp = client.post(f"/api/v1/requests/{req_id}/start", headers=tech_headers)
+    assert start_resp.status_code == 200
+    assert start_resp.json()["status"] == "In Progress"
+
+    # 4. Technician logs work
+    log_resp = client.post(
+        f"/api/v1/requests/{req_id}/work-logs",
+        headers=tech_headers,
+        json={
+            "diagnosis": "Suction strainer partially blinded with rust scale",
+            "actions_taken": "Isolated pump, cleaned basket strainer, bled air from casing.",
+            "hours_spent": 1.25
+        }
+    )
+    assert log_resp.status_code == 200
+
+    # 5. Technician submits completion
+    comp_resp = client.post(
+        f"/api/v1/requests/{req_id}/complete",
+        headers=tech_headers,
+        json={
+            "completion_summary": "Cleaned pump strainer and purged system air. Differential pressure restored to 32 PSI with silent operation.",
+            "hours_spent": 0.25
+        }
+    )
+    assert comp_resp.status_code == 200
+    assert comp_resp.json()["status"] == "Awaiting Verification"
+
+    # 6. Customer confirms resolution
+    verify_resp = client.post(
+        f"/api/v1/requests/{req_id}/verify",
+        headers=cust_headers,
+        json={
+            "confirmed": True,
+            "feedback_rating": 5,
+            "feedback_comments": "Pump is running whisper quiet now, thanks!"
+        }
+    )
+    assert verify_resp.status_code == 200
+    assert verify_resp.json()["status"] == "Closed"

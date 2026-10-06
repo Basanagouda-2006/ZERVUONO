@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
 
 from app.core.state_machine import RequestStatus, validate_transition
 from app.db.session import get_db
 from app.models.user import User
 from app.models.organization import Membership
+from app.models.location import Location
 from app.models.request import (
     MaintenanceRequest,
     RequestStatusHistory,
@@ -56,6 +57,17 @@ def list_requests(
 ):
     query = (
         db.query(MaintenanceRequest)
+        .options(
+            joinedload(MaintenanceRequest.requester),
+            joinedload(MaintenanceRequest.assigned_technician),
+            joinedload(MaintenanceRequest.location),
+            joinedload(MaintenanceRequest.asset),
+            selectinload(MaintenanceRequest.attachments),
+            selectinload(MaintenanceRequest.work_logs),
+            selectinload(MaintenanceRequest.materials),
+            selectinload(MaintenanceRequest.status_history),
+            selectinload(MaintenanceRequest.feedback),
+        )
         .filter(MaintenanceRequest.organization_id == membership.organization_id)
     )
 
@@ -91,6 +103,29 @@ def create_request(
 ):
     req_number = generate_request_number(db, membership.organization_id)
     
+    # Resolve location if location_id not provided or empty string
+    target_location_id = data.location_id if (data.location_id and data.location_id.strip()) else None
+    if not target_location_id and data.location_name and data.location_name.strip():
+        existing_loc = (
+            db.query(Location)
+            .filter(
+                Location.organization_id == membership.organization_id,
+                func.lower(Location.name) == func.lower(data.location_name.strip())
+            )
+            .first()
+        )
+        if existing_loc:
+            target_location_id = existing_loc.id
+        else:
+            new_loc = Location(
+                organization_id=membership.organization_id,
+                name=data.location_name.strip(),
+                is_active=True
+            )
+            db.add(new_loc)
+            db.flush()
+            target_location_id = new_loc.id
+
     req = MaintenanceRequest(
         organization_id=membership.organization_id,
         request_number=req_number,
@@ -100,9 +135,9 @@ def create_request(
         priority=data.priority or "Medium",
         status=RequestStatus.SUBMITTED.value,
         requester_id=membership.user_id,
-        location_id=data.location_id,
+        location_id=target_location_id,
         location_details=data.location_details,
-        asset_id=data.asset_id,
+        asset_id=data.asset_id if (data.asset_id and data.asset_id.strip()) else None,
     )
     db.add(req)
     db.flush()
@@ -130,8 +165,24 @@ def create_request(
     )
 
     db.commit()
-    db.refresh(req)
-    return req
+    
+    # Reload with eager-loaded relationships
+    return (
+        db.query(MaintenanceRequest)
+        .options(
+            joinedload(MaintenanceRequest.requester),
+            joinedload(MaintenanceRequest.assigned_technician),
+            joinedload(MaintenanceRequest.location),
+            joinedload(MaintenanceRequest.asset),
+            selectinload(MaintenanceRequest.attachments),
+            selectinload(MaintenanceRequest.work_logs),
+            selectinload(MaintenanceRequest.materials),
+            selectinload(MaintenanceRequest.status_history),
+            selectinload(MaintenanceRequest.feedback),
+        )
+        .filter(MaintenanceRequest.id == req.id)
+        .first()
+    )
 
 @router.get("/{id}", response_model=MaintenanceRequestResponse)
 def get_request(
@@ -141,6 +192,17 @@ def get_request(
 ):
     req = (
         db.query(MaintenanceRequest)
+        .options(
+            joinedload(MaintenanceRequest.requester),
+            joinedload(MaintenanceRequest.assigned_technician),
+            joinedload(MaintenanceRequest.location),
+            joinedload(MaintenanceRequest.asset),
+            selectinload(MaintenanceRequest.attachments),
+            selectinload(MaintenanceRequest.work_logs),
+            selectinload(MaintenanceRequest.materials),
+            selectinload(MaintenanceRequest.status_history),
+            selectinload(MaintenanceRequest.feedback),
+        )
         .filter(
             MaintenanceRequest.id == id,
             MaintenanceRequest.organization_id == membership.organization_id
@@ -274,6 +336,76 @@ def assign_technician(
     db.commit()
     db.refresh(req)
     return req
+
+@router.post("/{id}/claim", response_model=MaintenanceRequestResponse)
+def claim_request(
+    id: str,
+    membership: Membership = Depends(require_roles(["Technician", "Manager", "Admin"])),
+    db: Session = Depends(get_db)
+):
+    """Allow a technician or manager to self-claim and accept an unassigned request from the facility queue."""
+    req = (
+        db.query(MaintenanceRequest)
+        .filter(
+            MaintenanceRequest.id == id,
+            MaintenanceRequest.organization_id == membership.organization_id
+        )
+        .first()
+    )
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
+
+    if req.status not in [RequestStatus.SUBMITTED.value, RequestStatus.UNDER_REVIEW.value]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot claim a request currently in '{req.status}' state."
+        )
+
+    current_status = RequestStatus(req.status)
+    validate_transition(current_status, RequestStatus.ACCEPTED)
+
+    from_status = req.status
+    req.assigned_technician_id = membership.user_id
+    req.status = RequestStatus.ACCEPTED.value
+
+    history = RequestStatusHistory(
+        request_id=req.id,
+        actor_id=membership.user_id,
+        from_status=from_status,
+        to_status=RequestStatus.ACCEPTED.value,
+        action="TECHNICIAN_CLAIMED",
+        comment=f"Work order claimed from facility queue by {membership.user.full_name}."
+    )
+    db.add(history)
+
+    notification_service.notify_role(
+        db=db,
+        organization_id=membership.organization_id,
+        role="Manager",
+        title=f"Work Order Claimed: {req.request_number}",
+        message=f"{membership.user.full_name} claimed {req.title} directly from the facility open queue.",
+        notification_type="CLAIMED",
+        request_id=req.id
+    )
+
+    db.commit()
+    
+    return (
+        db.query(MaintenanceRequest)
+        .options(
+            joinedload(MaintenanceRequest.requester),
+            joinedload(MaintenanceRequest.assigned_technician),
+            joinedload(MaintenanceRequest.location),
+            joinedload(MaintenanceRequest.asset),
+            selectinload(MaintenanceRequest.attachments),
+            selectinload(MaintenanceRequest.work_logs),
+            selectinload(MaintenanceRequest.materials),
+            selectinload(MaintenanceRequest.status_history),
+            selectinload(MaintenanceRequest.feedback),
+        )
+        .filter(MaintenanceRequest.id == req.id)
+        .first()
+    )
 
 @router.post("/{id}/accept", response_model=MaintenanceRequestResponse)
 def accept_assignment(

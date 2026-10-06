@@ -169,7 +169,7 @@ export const WorkLogModal: React.FC<WorkLogModalProps> = ({
           </div>
 
           {includePart && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-brand-ivory/50 dark:bg-brand-dark-bg border border-brand-evergreen/10">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 rounded-xl bg-brand-ivory/50 dark:bg-brand-dark-bg border border-brand-evergreen/10">
               <div className="col-span-2">
                 <input
                   type="text"
@@ -182,11 +182,27 @@ export const WorkLogModal: React.FC<WorkLogModalProps> = ({
               <div>
                 <input
                   type="number"
+                  min="0.1"
+                  step="0.5"
                   placeholder="Qty"
                   value={quantity}
                   onChange={e => setQuantity(e.target.value)}
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-brand-evergreen/20 bg-white dark:bg-brand-dark-card outline-none"
                 />
+              </div>
+              <div>
+                <select
+                  value={unit}
+                  onChange={e => setUnit(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs rounded-lg border border-brand-evergreen/20 bg-white dark:bg-brand-dark-card outline-none"
+                >
+                  <option value="pcs">pcs</option>
+                  <option value="liters">liters</option>
+                  <option value="kg">kg</option>
+                  <option value="meters">meters</option>
+                  <option value="sets">sets</option>
+                  <option value="boxes">boxes</option>
+                </select>
               </div>
               <div>
                 <input

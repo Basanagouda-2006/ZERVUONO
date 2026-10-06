@@ -230,13 +230,25 @@ export const TechnicianDashboard: React.FC = () => {
                 {/* Direct Action Buttons on Card for quick mobile tap */}
                 <div className="flex flex-wrap sm:flex-col items-stretch gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-brand-evergreen/10">
                   {job.status === 'Submitted' && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setSearchParams({ request: job.id })}
-                    >
-                      Inspect & Review
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={async () => {
+                          await apiRequest(`/requests/${job.id}/claim`, { method: 'POST' });
+                          await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
+                        }}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Claim Job
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSearchParams({ request: job.id })}
+                      >
+                        Inspect
+                      </Button>
+                    </div>
                   )}
 
                   {job.status === 'Assigned' && (

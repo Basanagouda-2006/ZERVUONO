@@ -28,10 +28,12 @@ VALID_TRANSITIONS: Dict[RequestStatus, Set[RequestStatus]] = {
     RequestStatus.SUBMITTED: {
         RequestStatus.UNDER_REVIEW,
         RequestStatus.ASSIGNED,
+        RequestStatus.ACCEPTED,
         RequestStatus.CANCELLED
     },
     RequestStatus.UNDER_REVIEW: {
         RequestStatus.ASSIGNED,
+        RequestStatus.ACCEPTED,
         RequestStatus.CANCELLED
     },
     RequestStatus.ASSIGNED: {
@@ -56,6 +58,7 @@ VALID_TRANSITIONS: Dict[RequestStatus, Set[RequestStatus]] = {
         RequestStatus.UNDER_REVIEW,
         RequestStatus.ASSIGNED,
         RequestStatus.IN_PROGRESS,
+        RequestStatus.AWAITING_VERIFICATION,
         RequestStatus.CANCELLED
     },
     RequestStatus.CLOSED: set(),

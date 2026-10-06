@@ -24,6 +24,8 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
   const [category, setCategory] = useState('HVAC');
   const [priority, setPriority] = useState('Medium');
   const [locationId, setLocationId] = useState('');
+  const [customLocationName, setCustomLocationName] = useState('');
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
   const [locationDetails, setLocationDetails] = useState('');
   const [assetId, setAssetId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -71,6 +73,9 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
   const createMutation = useMutation({
     mutationFn: async () => {
       // 1. Create request
+      const effectiveLocationId = (!isCustomLocation && locationId) ? locationId : undefined;
+      const effectiveLocationName = (isCustomLocation || locations.length === 0) ? (customLocationName.trim() || undefined) : undefined;
+
       const req = await apiRequest('/requests/', {
         method: 'POST',
         body: JSON.stringify({
@@ -78,7 +83,8 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
           description,
           category,
           priority,
-          location_id: locationId || undefined,
+          location_id: effectiveLocationId,
+          location_name: effectiveLocationName,
           location_details: locationDetails || undefined,
           asset_id: assetId || undefined,
         }),
@@ -100,11 +106,17 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
       onClose();
       onSuccess(data.id);
       // Reset
       setTitle('');
       setDescription('');
+      setLocationId('');
+      setCustomLocationName('');
+      setIsCustomLocation(false);
+      setLocationDetails('');
+      setAssetId('');
       setSelectedFile(null);
       setAiNote(null);
     },
@@ -221,21 +233,69 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1 flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-brand-jade" /> Location
-            </label>
-            <select
-              value={locationId}
-              onChange={e => setLocationId(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
-            >
-              <option value="">Select facility location...</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name} {loc.building ? `(${loc.building})` : ''}
-                </option>
-              ))}
-            </select>
+            {locations.length === 0 ? (
+              <>
+                <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-brand-jade" /> Facility / Area Name
+                </label>
+                <input
+                  type="text"
+                  value={customLocationName}
+                  onChange={e => setCustomLocationName(e.target.value)}
+                  placeholder="e.g. Main Plant, Warehouse Bay 4"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
+                />
+              </>
+            ) : isCustomLocation ? (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-brand-forest dark:text-brand-dark-text flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-brand-jade" /> New Area Name
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setIsCustomLocation(false); setCustomLocationName(''); }}
+                    className="text-[11px] font-medium text-brand-jade hover:underline"
+                  >
+                    Select existing
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={customLocationName}
+                  onChange={e => setCustomLocationName(e.target.value)}
+                  placeholder="e.g. Loading Dock West, Lab 3"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-brand-forest dark:text-brand-dark-text flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-brand-jade" /> Location
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setIsCustomLocation(true); setLocationId(''); }}
+                    className="text-[11px] font-medium text-brand-jade hover:underline"
+                  >
+                    + New Area
+                  </button>
+                </div>
+                <select
+                  value={locationId}
+                  onChange={e => setLocationId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none"
+                >
+                  <option value="">Select facility location...</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name} {loc.building ? `(${loc.building})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
           </div>
 
           <div>
