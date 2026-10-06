@@ -3,8 +3,18 @@ const rawBase =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? 'https://zervono-api.onrender.com' : '');
 
-const API_BASE = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
-const BASE_URL = `${API_BASE}/api/v1`;
+export const API_BASE = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+export const BASE_URL = `${API_BASE}/api/v1`;
+
+export function getFileUrl(path: string | null | undefined): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const base = API_BASE || 'https://zervono-api.onrender.com';
+  return `${base}${cleanPath}`;
+}
 
 let authToken: string | null = null;
 let currentOrgId: string | null = null;

@@ -39,7 +39,43 @@ class StorageService:
         if not ext:
             ext = ".jpg" if "image" in (file.content_type or "") else ".dat"
 
-        storage_key = f"{organization_id}/{attachment_type}/{uuid.uuid4().hex}{ext}"
+        if settings.STORAGE_BACKEND == "s3" and settings.S3_BUCKET_NAME:
+            try:
+                import boto3
+                s3_kwargs = {
+                    "aws_access_key_id": settings.S3_ACCESS_KEY_ID,
+                    "aws_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
+                }
+                if settings.S3_ENDPOINT_URL:
+                    s3_kwargs["endpoint_url"] = settings.S3_ENDPOINT_URL
+                if settings.S3_REGION_NAME and settings.S3_REGION_NAME != "auto":
+                    s3_kwargs["region_name"] = settings.S3_REGION_NAME
+
+                s3_client = boto3.client("s3", **s3_kwargs)
+                await file.seek(0)
+                file_bytes = await file.read()
+                s3_client.put_object(
+                    Bucket=settings.S3_BUCKET_NAME,
+                    Key=storage_key,
+                    Body=file_bytes,
+                    ContentType=file.content_type
+                )
+                if settings.S3_ENDPOINT_URL:
+                    url = f"{settings.S3_ENDPOINT_URL.rstrip('/')}/{settings.S3_BUCKET_NAME}/{storage_key}"
+                else:
+                    url = f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{storage_key}"
+
+                return {
+                    "file_name": file.filename or "uploaded_file",
+                    "file_size": len(file_bytes),
+                    "mime_type": file.content_type or "application/octet-stream",
+                    "storage_key": storage_key,
+                    "url": url,
+                }
+            except Exception:
+                # Fall back to local file storage
+                await file.seek(0)
+
         target_path = self.upload_dir / storage_key
         target_path.parent.mkdir(parents=True, exist_ok=True)
 

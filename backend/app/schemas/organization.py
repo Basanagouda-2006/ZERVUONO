@@ -25,6 +25,12 @@ class OrganizationResponse(BaseModel):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+class OrganizationPublic(BaseModel):
+    id: str
+    name: str
+    slug: str
+    model_config = ConfigDict(from_attributes=True)
+
 class MembershipResponse(BaseModel):
     id: str
     user_id: str

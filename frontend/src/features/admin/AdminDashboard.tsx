@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck,
   Users,
@@ -11,17 +12,31 @@ import {
   CheckCircle2,
   AlertCircle,
   Copy,
-  Clock
+  Clock,
+  Layers,
+  Search,
+  Filter,
+  Wrench,
+  ArrowRight
 } from 'lucide-react';
-import { Membership, Invitation, AuditEvent, Organization, Location, Asset } from '../../types';
+import { MaintenanceRequest, Membership, Invitation, AuditEvent, Organization, Location, Asset } from '../../types';
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
+import { AssignmentModal } from '../manager/AssignmentModal';
+import { RequestDetailView } from '../requests/RequestDetailView';
 import { apiRequest } from '../../lib/api';
 
 export const AdminDashboard: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedReqId = searchParams.get('request');
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'audit' | 'org'>('members');
+  const [activeTab, setActiveTab] = useState<'requests' | 'members' | 'invitations' | 'audit' | 'org'>('requests');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [assigningReqId, setAssigningReqId] = useState<string | null>(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Technician');
@@ -29,6 +44,15 @@ export const AdminDashboard: React.FC = () => {
   const [generatedInvite, setGeneratedInvite] = useState<{ email: string; token: string; role: string } | null>(null);
 
   // Queries
+  const { data: requests = [], isLoading: requestsLoading } = useQuery<MaintenanceRequest[]>({
+    queryKey: ['requests', 'admin', statusFilter],
+    queryFn: () =>
+      apiRequest<MaintenanceRequest[]>(
+        `/requests/${statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : ''}`
+      ),
+    refetchInterval: 15000,
+  });
+
   const { data: members = [] } = useQuery<Membership[]>({
     queryKey: ['admin-members'],
     queryFn: () => apiRequest<Membership[]>('/organizations/members'),
@@ -64,6 +88,37 @@ export const AdminDashboard: React.FC = () => {
     },
   });
 
+  const filteredRequests = requests.filter(r =>
+    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.request_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (selectedReqId) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <RequestDetailView
+          requestId={selectedReqId}
+          onBack={() => {
+            searchParams.delete('request');
+            setSearchParams(searchParams);
+          }}
+          onOpenAssign={() => setAssigningReqId(selectedReqId)}
+        />
+        {assigningReqId && (
+          <AssignmentModal
+            isOpen={!!assigningReqId}
+            onClose={() => {
+              setAssigningReqId(null);
+              queryClient.invalidateQueries({ queryKey: ['requests'] });
+            }}
+            requestId={assigningReqId}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
@@ -74,7 +129,7 @@ export const AdminDashboard: React.FC = () => {
             Organization Governance & Administration
           </h1>
           <p className="text-xs text-brand-forest/70 dark:text-brand-dark-muted mt-1">
-            Manage users, role permissions, invitations, and compliance audit logs
+            Manage work requests, users, role permissions, invitations, and compliance audit logs
           </p>
         </div>
         <Button variant="primary" icon={<UserPlus className="w-4 h-4" />} onClick={() => setInviteModalOpen(true)}>
@@ -83,10 +138,20 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-brand-evergreen/10 dark:border-brand-dark-border gap-2 sm:gap-6 text-xs font-semibold">
+      <div className="flex border-b border-brand-evergreen/10 dark:border-brand-dark-border gap-2 sm:gap-6 text-xs font-semibold overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`pb-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'requests'
+              ? 'border-brand-jade text-brand-evergreen dark:text-brand-mint font-bold'
+              : 'border-transparent text-brand-forest/60 hover:text-brand-forest'
+          }`}
+        >
+          <Layers className="w-4 h-4" /> Work Requests ({requests.length})
+        </button>
         <button
           onClick={() => setActiveTab('members')}
-          className={`pb-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 ${
+          className={`pb-3 px-1 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'members'
               ? 'border-brand-jade text-brand-evergreen dark:text-brand-mint font-bold'
               : 'border-transparent text-brand-forest/60 hover:text-brand-forest'
@@ -125,6 +190,107 @@ export const AdminDashboard: React.FC = () => {
           <Building className="w-4 h-4" /> Tenancy Settings
         </button>
       </div>
+
+      {/* TAB 0: REQUESTS */}
+      {activeTab === 'requests' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
+              <input
+                type="text"
+                placeholder="Search requests by title, number, or category..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-brand-evergreen/15 bg-white dark:bg-brand-dark-card outline-none focus:ring-2 focus:ring-brand-jade"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-brand-forest/60" />
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="px-3 py-2 text-xs rounded-xl border border-brand-evergreen/15 bg-white dark:bg-brand-dark-card outline-none"
+              >
+                <option value="">All Statuses</option>
+                <option value="Submitted">Submitted (New)</option>
+                <option value="Assigned">Assigned</option>
+                <option value="Accepted">Accepted</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Awaiting Verification">Awaiting Verification</option>
+                <option value="Closed">Closed</option>
+                <option value="Reopened">Reopened</option>
+              </select>
+            </div>
+          </div>
+
+          <Card className="overflow-hidden">
+            {requestsLoading ? (
+              <div className="p-8 text-center text-xs text-brand-forest/60">Loading organization requests...</div>
+            ) : filteredRequests.length === 0 ? (
+              <div className="p-8 text-center text-xs text-brand-forest/60">No maintenance requests found matching your filters.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-brand-ivory/80 dark:bg-brand-dark-bg border-b border-brand-evergreen/10 text-brand-forest/70 uppercase text-[10px]">
+                    <tr>
+                      <th className="px-5 py-3 font-semibold">Request</th>
+                      <th className="px-5 py-3 font-semibold">Category</th>
+                      <th className="px-5 py-3 font-semibold">Priority</th>
+                      <th className="px-5 py-3 font-semibold">Status</th>
+                      <th className="px-5 py-3 font-semibold">Assigned Tech</th>
+                      <th className="px-5 py-3 font-semibold">Created</th>
+                      <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-evergreen/5 dark:divide-brand-dark-border">
+                    {filteredRequests.map(r => (
+                      <tr key={r.id} className="hover:bg-brand-ivory/50 dark:hover:bg-brand-dark-hover">
+                        <td className="px-5 py-3.5">
+                          <div className="font-mono text-[11px] font-bold text-brand-jade">{r.request_number}</div>
+                          <div className="font-bold text-brand-evergreen dark:text-white line-clamp-1">{r.title}</div>
+                        </td>
+                        <td className="px-5 py-3.5 text-brand-forest/80">{r.category}</td>
+                        <td className="px-5 py-3.5">
+                          <PriorityBadge priority={r.priority} />
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={r.status} />
+                        </td>
+                        <td className="px-5 py-3.5 text-brand-forest/70">
+                          {r.assigned_technician?.full_name || (
+                            <span className="italic text-brand-forest/40">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-brand-forest/60">
+                          {new Date(r.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-5 py-3.5 text-right space-x-2">
+                          <button
+                            onClick={() => setAssigningReqId(r.id)}
+                            className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-brand-jade/10 text-brand-evergreen hover:bg-brand-jade/20 transition-colors"
+                          >
+                            Assign
+                          </button>
+                          <button
+                            onClick={() => {
+                              searchParams.set('request', r.id);
+                              setSearchParams(searchParams);
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-brand-evergreen text-white hover:bg-brand-forest transition-colors"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* TAB 1: MEMBERS */}
       {activeTab === 'members' && (
@@ -403,6 +569,17 @@ export const AdminDashboard: React.FC = () => {
           </form>
         )}
       </Modal>
+
+      {assigningReqId && (
+        <AssignmentModal
+          isOpen={!!assigningReqId}
+          onClose={() => {
+            setAssigningReqId(null);
+            queryClient.invalidateQueries({ queryKey: ['requests'] });
+          }}
+          requestId={assigningReqId}
+        />
+      )}
     </div>
   );
 };

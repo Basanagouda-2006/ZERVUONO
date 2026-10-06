@@ -31,26 +31,37 @@ export const TechnicianDashboard: React.FC = () => {
   const selectedReqId = searchParams.get('request');
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'active' | 'assigned' | 'completed'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'assigned' | 'completed' | 'unassigned'>('active');
   const [activeWorkLogId, setActiveWorkLogId] = useState<string | null>(null);
   const [activeCompleteId, setActiveCompleteId] = useState<string | null>(null);
   const [activeTroubleshootId, setActiveTroubleshootId] = useState<string | null>(null);
 
-  const { data: jobs = [], isLoading } = useQuery<MaintenanceRequest[]>({
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery<MaintenanceRequest[]>({
     queryKey: ['requests', 'technician'],
     queryFn: () => apiRequest<MaintenanceRequest[]>('/requests/?my_assigned=true'),
+    refetchInterval: 10000,
+  });
+
+  const { data: allOrgJobs = [], isLoading: allOrgLoading } = useQuery<MaintenanceRequest[]>({
+    queryKey: ['requests', 'technician', 'open_queue'],
+    queryFn: () => apiRequest<MaintenanceRequest[]>('/requests/'),
     refetchInterval: 10000,
   });
 
   const assignedJobs = jobs.filter(j => j.status === 'Assigned');
   const inProgressJobs = jobs.filter(j => ['Accepted', 'In Progress', 'Reopened'].includes(j.status));
   const completedJobs = jobs.filter(j => ['Awaiting Verification', 'Closed'].includes(j.status));
+  const unassignedJobs = allOrgJobs.filter(j => j.status === 'Submitted' || (!j.assigned_technician_id && j.status !== 'Closed'));
+
+  const isLoading = jobsLoading || allOrgLoading;
 
   const displayJobs =
     activeTab === 'assigned'
       ? assignedJobs
       : activeTab === 'completed'
       ? completedJobs
+      : activeTab === 'unassigned'
+      ? unassignedJobs
       : inProgressJobs;
 
   if (selectedReqId) {
@@ -138,6 +149,16 @@ export const TechnicianDashboard: React.FC = () => {
         >
           <span>Completed ({completedJobs.length})</span>
         </button>
+        <button
+          onClick={() => setActiveTab('unassigned')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'unassigned'
+              ? 'bg-white dark:bg-brand-dark-bg text-brand-evergreen dark:text-brand-mint shadow-sm'
+              : 'text-brand-forest/70 dark:text-brand-dark-muted hover:text-brand-evergreen'
+          }`}
+        >
+          <span>Facility Open Queue ({unassignedJobs.length})</span>
+        </button>
       </div>
 
       {/* Job Cards */}
@@ -208,6 +229,16 @@ export const TechnicianDashboard: React.FC = () => {
 
                 {/* Direct Action Buttons on Card for quick mobile tap */}
                 <div className="flex flex-wrap sm:flex-col items-stretch gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-brand-evergreen/10">
+                  {job.status === 'Submitted' && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setSearchParams({ request: job.id })}
+                    >
+                      Inspect & Review
+                    </Button>
+                  )}
+
                   {job.status === 'Assigned' && (
                     <Button
                       variant="primary"

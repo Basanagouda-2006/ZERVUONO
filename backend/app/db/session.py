@@ -8,6 +8,7 @@ import app.models # noqa: F401
 
 engine_args = {
     "pool_pre_ping": True,
+    "pool_recycle": 180,
 }
 
 if settings.DATABASE_URL.startswith("sqlite"):
@@ -15,9 +16,16 @@ if settings.DATABASE_URL.startswith("sqlite"):
 else:
     engine_args["pool_size"] = 10
     engine_args["max_overflow"] = 20
+    connect_args = engine_args.setdefault("connect_args", {})
     if "pg8000" in settings.DATABASE_URL:
         import ssl
-        engine_args.setdefault("connect_args", {})["ssl_context"] = ssl.create_default_context()
+        connect_args["ssl_context"] = ssl.create_default_context()
+    else:
+        connect_args["connect_timeout"] = 15
+        connect_args["keepalives"] = 1
+        connect_args["keepalives_idle"] = 30
+        connect_args["keepalives_interval"] = 10
+        connect_args["keepalives_count"] = 5
 
 engine = create_engine(settings.DATABASE_URL, **engine_args)
 

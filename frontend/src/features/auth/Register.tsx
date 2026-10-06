@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Logo } from '../../components/ui/Logo';
 import { Lock, Mail, User, Building, AlertCircle, ArrowRight, Check, X, Wrench, Shield, Briefcase, Users } from 'lucide-react';
+import { apiRequest } from '../../lib/api';
 
 export const Register: React.FC = () => {
   const { register } = useAuth();
@@ -13,10 +14,25 @@ export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [availableOrgs, setAvailableOrgs] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('new');
   const [role, setRole] = useState<UserRole>('Customer');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    apiRequest<{ id: string; name: string; slug: string }[]>('/organizations/public-list')
+      .then(orgs => {
+        if (orgs && orgs.length > 0) {
+          setAvailableOrgs(orgs);
+          setSelectedOrgId(orgs[0].id);
+        }
+      })
+      .catch(() => {
+        // Fall back gracefully
+      });
+  }, []);
 
   // Live password validation
   const hasMinLen = password.length >= 8;
@@ -39,7 +55,8 @@ export const Register: React.FC = () => {
         email,
         password,
         full_name: fullName,
-        organization_name: orgName.trim() || undefined,
+        organization_id: selectedOrgId !== 'new' ? selectedOrgId : undefined,
+        organization_name: selectedOrgId === 'new' && orgName.trim() ? orgName.trim() : undefined,
         role: role,
       });
 
@@ -177,22 +194,59 @@ export const Register: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-xs font-semibold text-brand-forest dark:text-brand-dark-text">
-                Organization / Facility Name
+                Workspace / Organization
               </label>
-              <span className="text-[10px] text-brand-forest/50 dark:text-brand-dark-muted">Optional</span>
+              <span className="text-[10px] text-brand-forest/50 dark:text-brand-dark-muted">
+                {selectedOrgId !== 'new' ? 'Shared team workspace' : 'New organization'}
+              </span>
             </div>
-            <div className="relative">
-              <Building className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
-              <input
-                type="text"
-                value={orgName}
-                onChange={e => setOrgName(e.target.value)}
-                placeholder="e.g. Acme Industrial Services"
-                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
-              />
-            </div>
+            
+            {availableOrgs.length > 0 ? (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Building className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
+                  <select
+                    value={selectedOrgId}
+                    onChange={e => setSelectedOrgId(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
+                  >
+                    {availableOrgs.map(o => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} ({o.slug})
+                      </option>
+                    ))}
+                    <option value="new">+ Create a new organization...</option>
+                  </select>
+                </div>
+
+                {selectedOrgId === 'new' && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={orgName}
+                      onChange={e => setOrgName(e.target.value)}
+                      placeholder="e.g. Acme Industrial Services"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <Building className="w-4 h-4 absolute left-3 top-3 text-brand-forest/40" />
+                <input
+                  type="text"
+                  value={orgName}
+                  onChange={e => setOrgName(e.target.value)}
+                  placeholder="e.g. Acme Industrial Services"
+                  className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-brand-evergreen/20 dark:border-brand-dark-border bg-brand-ivory/20 dark:bg-brand-dark-bg focus:ring-2 focus:ring-brand-jade outline-none transition-all"
+                />
+              </div>
+            )}
             <p className="mt-1 text-[10px] text-brand-forest/50 dark:text-brand-dark-muted">
-              Enter to create or join a shared team workspace.
+              {selectedOrgId !== 'new'
+                ? 'Your account will be connected directly to this shared organization.'
+                : 'Enter a name to create a new shared organization.'}
             </p>
           </div>
 

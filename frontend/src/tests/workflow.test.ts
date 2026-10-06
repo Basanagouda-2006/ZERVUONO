@@ -131,4 +131,12 @@ describe('Zervuno Frontend Core Logic', () => {
     expect(capturedUrls[0]).toContain('/api/v1/auth/me');
     expect(capturedUrls[1]).toContain('/api/v1/auth/register');
   });
+
+  it('correctly resolves relative upload file URLs with getFileUrl', async () => {
+    const { getFileUrl, API_BASE } = await import('../lib/api');
+    expect(getFileUrl('/uploads/org-1/photo.jpg')).toBe(`${API_BASE}/uploads/org-1/photo.jpg`);
+    expect(getFileUrl('https://images.unsplash.com/photo-123')).toBe('https://images.unsplash.com/photo-123');
+    expect(getFileUrl('')).toBe('');
+    expect(getFileUrl(null)).toBe('');
+  });
 });

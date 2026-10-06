@@ -84,7 +84,13 @@ def register(
 
     # Handle organization creation or onboarding
     org = None
-    if data.organization_name and data.organization_name.strip():
+    if getattr(data, "organization_id", None) and data.organization_id.strip():
+        org = db.query(Organization).filter(
+            Organization.id == data.organization_id.strip(),
+            Organization.is_active == True
+        ).first()
+
+    if not org and data.organization_name and data.organization_name.strip():
         req_name = data.organization_name.strip()
         org = db.query(Organization).filter(
             (Organization.name.ilike(req_name)) | (Organization.slug == create_slug(req_name))
@@ -99,7 +105,8 @@ def register(
             org = Organization(name=req_name, slug=slug, is_active=True)
             db.add(org)
             db.flush()
-    else:
+
+    if not org:
         # Check if an active organization already exists to attach to
         org = db.query(Organization).filter(Organization.is_active == True).first()
         if not org:

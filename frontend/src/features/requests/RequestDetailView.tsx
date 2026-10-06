@@ -20,7 +20,7 @@ import { MaintenanceRequest } from '../../types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { Button } from '../../components/ui/Button';
-import { apiRequest } from '../../lib/api';
+import { apiRequest, getFileUrl } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { VerifyModal } from '../customer/VerifyModal';
 
@@ -289,31 +289,42 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
               </h3>
               {request.attachments && request.attachments.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {request.attachments.map(att => (
-                    <a
-                      key={att.id}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group block p-2 rounded-xl bg-brand-ivory/50 border border-brand-evergreen/10 hover:border-brand-jade transition-all overflow-hidden"
-                    >
-                      {att.mime_type.startsWith('image/') ? (
-                        <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-1.5">
-                          <img src={att.url} alt={att.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                        </div>
-                      ) : (
-                        <div className="aspect-video bg-brand-forest/5 flex items-center justify-center rounded-lg mb-1.5">
-                          <FileText className="w-6 h-6 text-brand-jade" />
-                        </div>
-                      )}
-                      <span className="text-[11px] font-medium text-brand-forest dark:text-brand-dark-text truncate block">
-                        {att.file_name}
-                      </span>
-                      <span className="text-[10px] text-brand-forest/50 dark:text-brand-dark-muted block">
-                        {att.attachment_type} · {(att.file_size / 1024).toFixed(0)} KB
-                      </span>
-                    </a>
-                  ))}
+                  {request.attachments.map(att => {
+                    const resolvedUrl = getFileUrl(att.url);
+                    return (
+                      <a
+                        key={att.id}
+                        href={resolvedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group block p-2 rounded-xl bg-brand-ivory/50 border border-brand-evergreen/10 hover:border-brand-jade transition-all overflow-hidden"
+                      >
+                        {att.mime_type.startsWith('image/') ? (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-1.5 flex items-center justify-center">
+                            <img
+                              src={resolvedUrl}
+                              alt={att.file_name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              onError={(e) => {
+                                // Fallback icon on image load failure
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-brand-forest/5 flex items-center justify-center rounded-lg mb-1.5">
+                            <FileText className="w-6 h-6 text-brand-jade" />
+                          </div>
+                        )}
+                        <span className="text-[11px] font-medium text-brand-forest dark:text-brand-dark-text truncate block">
+                          {att.file_name}
+                        </span>
+                        <span className="text-[10px] text-brand-forest/50 dark:text-brand-dark-muted block">
+                          {att.attachment_type} · {(att.file_size / 1024).toFixed(0)} KB
+                        </span>
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-xs text-brand-forest/50 dark:text-brand-dark-muted italic">

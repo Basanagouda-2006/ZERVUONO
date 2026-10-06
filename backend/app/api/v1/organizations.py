@@ -13,6 +13,7 @@ from app.schemas.organization import (
     OrganizationCreate,
     OrganizationUpdate,
     OrganizationResponse,
+    OrganizationPublic,
     MembershipResponse,
     InvitationCreate,
     InvitationResponse,
@@ -26,6 +27,11 @@ router = APIRouter()
 def create_slug(name: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", name.strip().lower()).strip("-")
     return slug or "org"
+
+@router.get("/public-list", response_model=List[OrganizationPublic])
+def get_public_organizations(db: Session = Depends(get_db)):
+    """Retrieve list of active organizations for user registration and workspace discovery."""
+    return db.query(Organization).filter(Organization.is_active == True).order_by(Organization.name.asc()).all()
 
 @router.get("/my-organizations", response_model=List[OrganizationResponse])
 def get_my_organizations(

@@ -92,14 +92,15 @@ class Settings(BaseSettings):
         elif url.startswith("postgresql+psycopg2://") and driver == "pg8000":
             url = url.replace("postgresql+psycopg2://", "postgresql+pg8000://", 1)
 
-        # For pg8000, strip libpq-specific parameters from query string
-        if driver == "pg8000" and "?" in url:
+        # Strip parameters not supported by poolers or alternative drivers
+        if "?" in url:
             import urllib.parse
             parsed_p = urllib.parse.urlsplit(url)
             q_dict = urllib.parse.parse_qs(parsed_p.query)
-            # Remove libpq parameters that pg8000 does not understand
-            q_dict.pop("sslmode", None)
+            # Neon PgBouncer pooler does not support channel binding
             q_dict.pop("channel_binding", None)
+            if driver == "pg8000":
+                q_dict.pop("sslmode", None)
             new_q = urllib.parse.urlencode(q_dict, doseq=True)
             url = urllib.parse.urlunsplit((parsed_p.scheme, parsed_p.netloc, parsed_p.path, new_q, parsed_p.fragment))
 
@@ -112,14 +113,15 @@ class Settings(BaseSettings):
             if hostname and hostname not in ("localhost", "127.0.0.1") and not hostname.replace(".", "").isdigit():
                 query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
                 if "hostaddr" not in query_params:
-                    # Test if system DNS can resolve it
-                    need_fallback = False
+                    # Check if system DNS cannot resolve hostname
+                    system_dns_ok = False
                     try:
                         socket.gethostbyname(hostname)
+                        system_dns_ok = True
                     except Exception:
-                        need_fallback = True
+                        system_dns_ok = False
 
-                    if need_fallback:
+                    if not system_dns_ok:
                         try:
                             import dns.resolver
                             resolver = dns.resolver.Resolver()
