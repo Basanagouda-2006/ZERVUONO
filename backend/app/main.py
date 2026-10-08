@@ -43,10 +43,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files for evidence and photo uploads
-upload_dir = Path(settings.UPLOAD_DIR)
-upload_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+# Uploads route with database fallback for persistent file serving
+from fastapi.responses import FileResponse, Response
+
+@app.get("/uploads/{file_path:path}", tags=["Uploads"])
+def serve_upload(file_path: str):
+    clean_path = file_path.replace("\\", "/")
+    local_target = Path(settings.UPLOAD_DIR) / clean_path
+    if local_target.exists() and local_target.is_file():
+        return FileResponse(path=str(local_target))
+
+    # Database persistent fallback from Neon PostgreSQL
+    try:
+        from app.db.session import SessionLocal
+        from app.models.request import Attachment
+        with SessionLocal() as db:
+            att = db.query(Attachment).filter(
+                (Attachment.storage_key == clean_path) |
+                (Attachment.storage_key.ilike(f"%{Path(clean_path).name}"))
+            ).first()
+            if att and att.file_data:
+                return Response(
+                    content=att.file_data,
+                    media_type=att.mime_type or "image/jpeg",
+                    headers={
+                        "Cache-Control": "public, max-age=31536000, immutable",
+                        "Content-Disposition": f'inline; filename="{att.file_name}"',
+                    }
+                )
+    except Exception:
+        pass
+
+    return JSONResponse(status_code=404, content={"detail": "File not found"})
 
 # Mount API v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)

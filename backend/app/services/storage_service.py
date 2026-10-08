@@ -57,6 +57,16 @@ class StorageService:
         safe_filename = f"{unique_id}{ext}"
         storage_key = f"{organization_id}/{attachment_type}/{safe_filename}"
 
+        # Read file bytes upfront
+        await file.seek(0)
+        file_bytes = await file.read()
+        file_size = len(file_bytes)
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="File exceeds maximum allowed size of 20MB."
+            )
+
         if settings.STORAGE_BACKEND == "s3" and settings.S3_BUCKET_NAME:
             try:
                 import boto3
@@ -70,13 +80,11 @@ class StorageService:
                     s3_kwargs["region_name"] = settings.S3_REGION_NAME
 
                 s3_client = boto3.client("s3", **s3_kwargs)
-                await file.seek(0)
-                file_bytes = await file.read()
                 s3_client.put_object(
                     Bucket=settings.S3_BUCKET_NAME,
                     Key=storage_key,
                     Body=file_bytes,
-                    ContentType=file.content_type
+                    ContentType=content_type or "application/octet-stream"
                 )
                 if settings.S3_ENDPOINT_URL:
                     url = f"{settings.S3_ENDPOINT_URL.rstrip('/')}/{settings.S3_BUCKET_NAME}/{storage_key}"
@@ -85,40 +93,33 @@ class StorageService:
 
                 return {
                     "file_name": file.filename or "uploaded_file",
-                    "file_size": len(file_bytes),
-                    "mime_type": file.content_type or "application/octet-stream",
+                    "file_size": file_size,
+                    "mime_type": content_type or "application/octet-stream",
                     "storage_key": storage_key,
                     "url": url,
+                    "file_bytes": file_bytes,
                 }
             except Exception:
-                # Fall back to local file storage
-                await file.seek(0)
+                # Fall back to persistent storage / local cache
+                pass
 
-        target_path = self.upload_dir / storage_key
-        target_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            target_path = self.upload_dir / storage_key
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            async with aiofiles.open(target_path, "wb") as out_file:
+                await out_file.write(file_bytes)
+        except Exception:
+            pass
 
-        size = 0
-        async with aiofiles.open(target_path, "wb") as out_file:
-            while chunk := await file.read(1024 * 1024): # 1MB chunks
-                size += len(chunk)
-                if size > MAX_FILE_SIZE:
-                    # Clean up file on overflow
-                    target_path.unlink(missing_ok=True)
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="File exceeds maximum allowed size of 20MB."
-                    )
-                await out_file.write(chunk)
-
-        # Public relative URL served by FastAPI static route
         url = f"/uploads/{storage_key.replace('\\', '/')}"
 
         return {
             "file_name": file.filename or "uploaded_file",
-            "file_size": size,
-            "mime_type": file.content_type or "application/octet-stream",
+            "file_size": file_size,
+            "mime_type": content_type or "application/octet-stream",
             "storage_key": storage_key,
             "url": url,
+            "file_bytes": file_bytes,
         }
 
 storage_service = StorageService()

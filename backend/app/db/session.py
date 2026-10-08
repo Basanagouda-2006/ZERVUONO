@@ -39,5 +39,12 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 def init_tables():
-    """Create all tables if they do not exist."""
+    """Create all tables if they do not exist and ensure schema updates."""
     Base.metadata.create_all(bind=engine)
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE attachments ADD COLUMN IF NOT EXISTS file_data BYTEA;"))
+            conn.commit()
+    except Exception:
+        pass

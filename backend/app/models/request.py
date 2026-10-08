@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy import (
-    Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+    Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, LargeBinary
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -103,6 +103,7 @@ class Attachment(Base):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    file_data: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     attachment_type: Mapped[str] = mapped_column(String(50), default="Initial", nullable=False) # Initial, Before, After, Document
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 

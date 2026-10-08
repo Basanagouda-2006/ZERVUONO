@@ -315,3 +315,10 @@ def test_file_upload_workflow(client):
     assert len(detail["attachments"]) >= 1
     assert detail["attachments"][0]["file_name"] == "panel_damage.jpg"
 
+    # 4. Verify browser can fetch image URL directly and receive HTTP 200 with persistent content
+    img_url = detail["attachments"][0]["url"]
+    img_resp = client.get(img_url)
+    assert img_resp.status_code == 200
+    assert img_resp.content == fake_image_bytes
+    assert "image" in img_resp.headers.get("content-type", "")
+
