@@ -19,6 +19,31 @@ export function getFileUrl(path: string | null | undefined): string {
 let authToken: string | null = null;
 let currentOrgId: string | null = null;
 
+function getStorageItem(key: string): string | null {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const val = localStorage.getItem(key);
+      if (val) return val;
+    }
+  } catch {}
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem(key);
+    }
+  } catch {}
+  return null;
+}
+
+function setStorageItem(key: string, value: string | null) {
+  if (value) {
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(key, value); } catch {}
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, value); } catch {}
+  } else {
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch {}
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key); } catch {}
+  }
+}
+
 export class ApiError extends Error {
   status: number;
   data?: any;
@@ -33,32 +58,24 @@ export class ApiError extends Error {
 
 export function setAuthToken(token: string | null) {
   authToken = token;
-  if (token) {
-    sessionStorage.setItem('zervuno_token', token);
-  } else {
-    sessionStorage.removeItem('zervuno_token');
-  }
+  setStorageItem('zervuno_token', token);
 }
 
 export function getAuthToken(): string | null {
   if (!authToken) {
-    authToken = sessionStorage.getItem('zervuno_token');
+    authToken = getStorageItem('zervuno_token');
   }
   return authToken;
 }
 
 export function setCurrentOrgId(orgId: string | null) {
   currentOrgId = orgId;
-  if (orgId) {
-    sessionStorage.setItem('zervuno_org_id', orgId);
-  } else {
-    sessionStorage.removeItem('zervuno_org_id');
-  }
+  setStorageItem('zervuno_org_id', orgId);
 }
 
 export function getCurrentOrgId(): string | null {
   if (!currentOrgId) {
-    currentOrgId = sessionStorage.getItem('zervuno_org_id');
+    currentOrgId = getStorageItem('zervuno_org_id');
   }
   return currentOrgId;
 }
@@ -85,12 +102,40 @@ export async function apiRequest<T = any>(
   }
 
   const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const isGet = !options.method || options.method.toUpperCase() === 'GET';
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include', // for HttpOnly cookies
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include', // for HttpOnly cookies
+    });
+  } catch (err: any) {
+    // If it's a GET request and network dropped or server waking up, try once more after a brief delay
+    if (isGet) {
+      try {
+        await new Promise(r => setTimeout(r, 800));
+        response = await fetch(url, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+      } catch (retryErr: any) {
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        const msg = isOffline
+          ? 'You appear to be offline. Please check your internet connection.'
+          : 'Unable to connect to server. Please check your network or try again in a moment.';
+        throw new ApiError(msg, 0, { originalError: retryErr?.message || 'NetworkError' });
+      }
+    } else {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const msg = isOffline
+        ? 'You appear to be offline. Please check your internet connection.'
+        : 'Network request failed. Please check your connection or try again.';
+      throw new ApiError(msg, 0, { originalError: err?.message || 'NetworkError' });
+    }
+  }
 
   // Read response text once to avoid "body stream already read" TypeError
   let rawText = '';

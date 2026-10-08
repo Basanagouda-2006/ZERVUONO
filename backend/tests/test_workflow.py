@@ -266,3 +266,52 @@ def test_technician_claim_and_complete_workflow(client):
     )
     assert verify_resp.status_code == 200
     assert verify_resp.json()["status"] == "Closed"
+
+def test_file_upload_workflow(client):
+    import io
+    customer_token = get_token(client, "customer@zervuno.com")
+    cust_headers = {"Authorization": f"Bearer {customer_token}"}
+
+    # 1. Create request
+    create_resp = client.post(
+        "/api/v1/requests/",
+        headers=cust_headers,
+        json={
+            "title": "Control panel LCD flickering",
+            "description": "Backlight on CNC panel flashing erratically",
+            "category": "Electrical",
+            "priority": "Medium"
+        }
+    )
+    assert create_resp.status_code == 201
+    req_id = create_resp.json()["id"]
+
+    # 2. Upload photo attachment
+    fake_image_bytes = b"\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xFF\xDB\x00C\x00"
+    files = {
+        "file": ("panel_damage.jpg", io.BytesIO(fake_image_bytes), "image/jpeg")
+    }
+    data = {
+        "request_id": req_id,
+        "attachment_type": "Initial"
+    }
+
+    upload_resp = client.post(
+        "/api/v1/files/upload",
+        headers=cust_headers,
+        data=data,
+        files=files
+    )
+    assert upload_resp.status_code == 200, f"Upload failed: {upload_resp.text}"
+    att_data = upload_resp.json()
+    assert att_data["file_name"] == "panel_damage.jpg"
+    assert att_data["url"] is not None
+    assert att_data["attachment_type"] == "Initial"
+
+    # 3. Verify request detail includes attachment
+    detail_resp = client.get(f"/api/v1/requests/{req_id}", headers=cust_headers)
+    assert detail_resp.status_code == 200
+    detail = detail_resp.json()
+    assert len(detail["attachments"]) >= 1
+    assert detail["attachments"][0]["file_name"] == "panel_damage.jpg"
+

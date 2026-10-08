@@ -11,8 +11,16 @@ ALLOWED_MIME_TYPES = {
     "image/png",
     "image/webp",
     "image/heic",
+    "image/heif",
+    "image/heic-sequence",
+    "image/heif-sequence",
+    "image/pjpeg",
+    "image/bmp",
+    "image/tiff",
+    "image/gif",
     "application/pdf",
     "text/plain",
+    "application/octet-stream",
 }
 
 MAX_FILE_SIZE = 20 * 1024 * 1024 # 20 MB
@@ -28,16 +36,26 @@ class StorageService:
         organization_id: str,
         attachment_type: str = "general"
     ) -> dict:
-        if file.content_type not in ALLOWED_MIME_TYPES:
+        content_type = (file.content_type or "").lower()
+        ext = Path(file.filename or "").suffix.lower()
+
+        # Allow supported mime types or known safe image/document extensions
+        is_allowed = content_type in ALLOWED_MIME_TYPES or ext in {
+            ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".pdf", ".txt", ".bmp", ".tiff"
+        }
+        if not is_allowed:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported file type: {file.content_type}. Allowed types: JPEG, PNG, WebP, PDF."
+                detail=f"Unsupported file type: {file.content_type}. Allowed types: JPEG, PNG, WebP, HEIC, PDF."
             )
 
         # Generate secure unique key
-        ext = Path(file.filename or "").suffix.lower()
         if not ext:
-            ext = ".jpg" if "image" in (file.content_type or "") else ".dat"
+            ext = ".jpg" if "image" in content_type else ".dat"
+
+        unique_id = str(uuid.uuid4())
+        safe_filename = f"{unique_id}{ext}"
+        storage_key = f"{organization_id}/{attachment_type}/{safe_filename}"
 
         if settings.STORAGE_BACKEND == "s3" and settings.S3_BUCKET_NAME:
             try:

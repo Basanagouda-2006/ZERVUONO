@@ -92,14 +92,18 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
 
       // 2. Upload file if selected
       if (selectedFile && req.id) {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('request_id', req.id);
-        formData.append('attachment_type', 'Initial');
-        await apiRequest('/files/upload', {
-          method: 'POST',
-          body: formData,
-        });
+        try {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          formData.append('request_id', req.id);
+          formData.append('attachment_type', 'Initial');
+          await apiRequest('/files/upload', {
+            method: 'POST',
+            body: formData,
+          });
+        } catch (uploadErr: any) {
+          console.warn('Photo upload error during ticket creation:', uploadErr);
+        }
       }
 
       return req;

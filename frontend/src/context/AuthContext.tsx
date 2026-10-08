@@ -25,10 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.organization_id) {
         setCurrentOrgId(data.organization_id);
       }
-    } catch {
-      setUser(null);
-      setAuthToken(null);
-      setCurrentOrgId(null);
+    } catch (e: any) {
+      if (e?.status === 401 || e?.status === 403) {
+        setUser(null);
+        setAuthToken(null);
+        setCurrentOrgId(null);
+      }
     } finally {
       setIsLoading(false);
     }
