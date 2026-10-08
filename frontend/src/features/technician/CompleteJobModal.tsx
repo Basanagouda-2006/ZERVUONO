@@ -51,6 +51,7 @@ export const CompleteJobModal: React.FC<CompleteJobModalProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       onClose();
       setCompletionSummary('');
       setSelectedFile(null);

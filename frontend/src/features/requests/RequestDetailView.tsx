@@ -26,6 +26,7 @@ import { VerifyModal } from '../customer/VerifyModal';
 import { WorkLogModal } from '../technician/WorkLogModal';
 import { CompleteJobModal } from '../technician/CompleteJobModal';
 import { AITroubleshootDrawer } from '../technician/AITroubleshootDrawer';
+import { AssignmentModal } from '../manager/AssignmentModal';
 
 interface RequestDetailViewProps {
   requestId: string;
@@ -47,9 +48,15 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [internalAssignOpen, setInternalAssignOpen] = useState(false);
   const [internalWorkLogOpen, setInternalWorkLogOpen] = useState(false);
   const [internalCompleteOpen, setInternalCompleteOpen] = useState(false);
   const [internalTroubleshootOpen, setInternalTroubleshootOpen] = useState(false);
+
+  const handleOpenAssign = () => {
+    if (onOpenAssign) onOpenAssign();
+    else setInternalAssignOpen(true);
+  };
 
   const handleOpenWorkLog = () => {
     if (onOpenWorkLog) onOpenWorkLog();
@@ -127,7 +134,7 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {/* Manager Actions */}
           {isManager && (
-            <Button variant="primary" size="sm" onClick={onOpenAssign}>
+            <Button variant="primary" size="sm" onClick={handleOpenAssign}>
               {request.assigned_technician_id ? 'Reassign Technician' : 'Assign Technician'}
             </Button>
           )}
@@ -328,23 +335,34 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {request.attachments.map(att => {
                     const resolvedUrl = getFileUrl(att.url);
+                    const isImg =
+                      (att.mime_type && att.mime_type.startsWith('image/')) ||
+                      /\.(jpg|jpeg|png|webp|heic|heif|gif|svg)$/i.test(att.file_name || '') ||
+                      /\.(jpg|jpeg|png|webp|heic|heif|gif|svg)$/i.test(att.url || '');
                     return (
                       <a
                         key={att.id}
                         href={resolvedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group block p-2 rounded-xl bg-brand-ivory/50 border border-brand-evergreen/10 hover:border-brand-jade transition-all overflow-hidden"
+                        className="group block p-2 rounded-xl bg-brand-ivory/50 dark:bg-brand-dark-bg border border-brand-evergreen/10 hover:border-brand-jade transition-all overflow-hidden"
                       >
-                        {att.mime_type.startsWith('image/') ? (
-                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-1.5 flex items-center justify-center">
+                        {isImg ? (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-1.5 flex items-center justify-center relative">
                             <img
                               src={resolvedUrl}
                               alt={att.file_name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               onError={(e) => {
-                                // Fallback icon on image load failure
-                                (e.target as HTMLElement).style.display = 'none';
+                                const target = e.target as HTMLElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent && !parent.querySelector('.img-fallback')) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'img-fallback flex flex-col items-center justify-center text-[10px] text-brand-forest/70 p-2 text-center';
+                                  fallback.innerHTML = '<span class="font-semibold text-brand-jade">View Image ↗</span>';
+                                  parent.appendChild(fallback);
+                                }
                               }}
                             />
                           </div>
@@ -517,6 +535,15 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({
           isOpen={internalTroubleshootOpen}
           onClose={() => setInternalTroubleshootOpen(false)}
           requestId={requestId}
+        />
+      )}
+      {internalAssignOpen && (
+        <AssignmentModal
+          isOpen={internalAssignOpen}
+          onClose={() => setInternalAssignOpen(false)}
+          requestId={requestId}
+          currentTechId={request.assigned_technician_id}
+          currentPriority={request.priority}
         />
       )}
     </div>

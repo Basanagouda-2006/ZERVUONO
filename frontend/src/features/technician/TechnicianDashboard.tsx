@@ -236,7 +236,8 @@ export const TechnicianDashboard: React.FC = () => {
                         size="sm"
                         onClick={async () => {
                           await apiRequest(`/requests/${job.id}/claim`, { method: 'POST' });
-                          await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
+                          await queryClient.invalidateQueries({ queryKey: ['requests'] });
+                          await queryClient.invalidateQueries({ queryKey: ['reports'] });
                         }}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Claim Job
@@ -257,7 +258,8 @@ export const TechnicianDashboard: React.FC = () => {
                       size="sm"
                       onClick={async () => {
                         await apiRequest(`/requests/${job.id}/accept`, { method: 'POST' });
-                        await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
+                        await queryClient.invalidateQueries({ queryKey: ['requests'] });
+                        await queryClient.invalidateQueries({ queryKey: ['reports'] });
                       }}
                     >
                       <Check className="w-3.5 h-3.5 mr-1" /> Accept Job
@@ -270,7 +272,8 @@ export const TechnicianDashboard: React.FC = () => {
                       size="sm"
                       onClick={async () => {
                         await apiRequest(`/requests/${job.id}/start`, { method: 'POST' });
-                        await queryClient.invalidateQueries({ queryKey: ['requests', 'technician'] });
+                        await queryClient.invalidateQueries({ queryKey: ['requests'] });
+                        await queryClient.invalidateQueries({ queryKey: ['reports'] });
                       }}
                     >
                       <Play className="w-3.5 h-3.5 mr-1" /> Start Work

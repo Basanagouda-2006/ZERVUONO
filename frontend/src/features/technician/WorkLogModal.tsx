@@ -74,6 +74,7 @@ export const WorkLogModal: React.FC<WorkLogModalProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       onClose();
       setDiagnosis('');
       setActionsTaken('');
