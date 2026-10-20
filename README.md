@@ -1,256 +1,397 @@
-# Zervuno — Maintenance Operations SaaS Platform
+# ZERVUONO — Multi-Tenant Maintenance Operations Platform
 
-> **Tagline:** Keep work moving.  
-> **Mission:** Bring maintenance requests, technicians, equipment assets, and customer proof of work into one clear operational rhythm.
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%200.111-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://react.dev)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20Neon-336791.svg?style=flat&logo=postgresql)](https://neon.tech)
+[![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind%20CSS%203.4-38B2AC.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
-
-## 1. Product Overview & Architecture
-
-Zervuno is a full-stack, multi-tenant maintenance operations platform built from scratch. It connects four critical roles into an explicit, audited state machine:
-
-$$\text{Customer} \longrightarrow \text{Manager} \longrightarrow \text{Technician} \longrightarrow \text{Customer} \longrightarrow \text{Manager}$$
-
-### Technology Stack
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Frontend** | React 18 + TypeScript + Vite | Blazing fast, type-safe single-page application |
-| **Styling** | Tailwind CSS + Accessible tokens | Brand palette (Evergreen `#183F35`, Jade `#399477`, Warm Ivory `#F6F3EA`) with Dark mode |
-| **Server State** | TanStack React Query v5 | Automatic caching, real-time polling, and cache invalidation |
-| **Backend** | Python 3.12 + FastAPI | High-performance asynchronous REST API with automatic OpenAPI docs |
-| **Validation** | Pydantic v2 | Strict request/response validation and serialisation |
-| **ORM & DB** | SQLAlchemy 2 + PostgreSQL | Normalized relational schema with strict foreign keys and timezone-aware timestamps |
-| **Hosted Database**| Neon / Local PostgreSQL | Cloud-native serverless PostgreSQL persistence with pooling |
-| **Migrations** | Alembic | Tracked, reversible schema migration management |
-| **Security** | Argon2id + HttpOnly Cookies + JWT | Cryptographic password hashing, secure session management, and RBAC |
-| **AI Diagnostics** | Google Gemini API (`google-genai`) | Automated category detection, priority recommendation, and field troubleshooting |
-| **Testing** | Pytest + Vitest | Full-stack automated unit, workflow, and security test coverage |
+> **Keep work moving.**<br>
+> An autonomous, cloud-native Maintenance Operations and Computerized Maintenance Management System (CMMS) SaaS platform that unifies maintenance requests, equipment assets, technician dispatches, labor/parts tracking, and verifiable customer proof into an audited operational rhythm.
 
 ---
 
-## 2. Default Seed Organization & 4 Connected Demo Roles
+## 📌 Project Overview
 
-A complete operational dataset ("Apex Logistics & Warehousing") is automatically seeded into PostgreSQL on first run.
+**ZERVUONO** is a full-stack, enterprise-grade maintenance operations platform engineered to streamline facility and equipment management. Built with a modern, decoupled architecture, it integrates:
+- A high-performance **FastAPI (Python 3.12)** asynchronous backend.
+- A reactive, type-safe **React 18 + TypeScript + Vite** frontend.
+- Relational data modeling with **SQLAlchemy 2** and **PostgreSQL (Neon)**.
+- Secure, multi-tenant organization scoping with strict **Role-Based Access Control (RBAC)**.
+- Deterministic, audited state machine transitions for maintenance requests.
+- Resilient image and evidence storage using database `BYTEA` storage with S3 fallback.
+- AI-assisted diagnostic recommendations powered by the **Google Gemini API** (`google-genai`) with grounded rule-based fallbacks.
 
-| Role | Demo Email | Password | Primary Capabilities |
+### Deployment & Repository Links
+
+- **Live Application Frontend:** [https://zervuono.vercel.app](https://zervuono.vercel.app)
+- **Live API Backend:** [https://zervono-api.onrender.com](https://zervono-api.onrender.com)
+- **Interactive OpenAPI Documentation:** [https://zervono-api.onrender.com/docs](https://zervono-api.onrender.com/docs)
+- **GitHub Repository:** [https://github.com/Basanagouda-2006/ZERVUONO](https://github.com/Basanagouda-2006/ZERVUONO)
+
+---
+
+## ⚠️ Problem Statement & The ZERVUONO Solution
+
+### The Problem
+Traditional facility and equipment maintenance in industrial parks, commercial complexes, and institutions relies on fragmented channels:
+1. **Unstructured Communication:** Phone calls, WhatsApp messages, or handwritten logbooks lead to lost work orders and lack of accountability.
+2. **Missing Visibility:** Requesters (customers) have no real-time status updates on when a technician will arrive or whether parts have been ordered.
+3. **Unverifiable Work Proof:** Technicians complete work without photographic evidence or itemized labor/spare parts logging, causing disputes.
+4. **Data Isolation Gaps:** Multi-department or multi-client organizations struggle to keep maintenance history isolated without deploying separate software instances.
+
+### The Solution
+ZERVUONO replaces haphazard communication with an **enforced operational rhythm**:
+- **Single Source of Truth:** Every issue generates a tracked ticket (`REQ-1001`) associated with a facility location and asset tag.
+- **Explicit Lifecycle State Machine:** Requests follow strict state transitions (`Submitted` → `Assigned` → `Accepted` → `In Progress` → `Awaiting Verification` → `Closed` / `Reopened`).
+- **Cryptographic & Tenant Security:** Organization-level isolation prevents cross-tenant data leakage; Argon2id password hashing and JWT/HttpOnly cookie sessions protect accounts.
+- **Proof-of-Work Pipeline:** Photographic attachments and material consumption logs provide immutable audit proof before customer sign-off.
+- **AI Diagnostics:** Instant classification of equipment faults, recommended priority tiers, and tailored troubleshooting steps based on historical organization data.
+
+---
+
+## 👥 The Four Operational Roles
+
+ZERVUONO connects four distinct personas into an integrated workflow:
+
+```mermaid
+graph LR
+    C[👤 Customer / Requester] -->|1. Submit Request with Photos| M[👔 Operations Manager]
+    M -->|2. Triage, SLA Priority & Dispatch| T[🔧 Field Technician]
+    T -->|3. Accept, Diagnose & Log Labor/Parts| T
+    T -->|4. Submit Completion Proof| C
+    C -->|5a. Confirm & Rate 5-Stars| Closed([✅ Ticket Closed])
+    C -->|5b. Reject with Reason| Reopened([🔄 Reopened to Queue])
+    Admin[🛡️ Organization Admin] -.->|Govern Users, Locations, Assets & Audit Logs| M
+    Admin -.->|System-wide Analytics & Settings| T
+```
+
+### 1. 👤 Customer (Requester)
+- Report issues in seconds with title, category, priority, building/floor/room location, and photo evidence.
+- Track real-time progress of open tickets with automated notifications.
+- Verify technician resolution reports: either confirm resolution with 1–5 star rating and feedback or reopen with mandatory justification.
+
+### 2. 👔 Operations Manager
+- Triage incoming facility queue across all categories and departments.
+- Inspect real-time technician workload, active jobs, and completion times.
+- Assign tickets to available technicians with due dates and specialized instructions.
+- Oversee preventative maintenance schedules and trigger recurring service orders.
+- Review analytical KPI reports (average resolution hours, reopen rates, status breakdowns).
+
+### 3. 🔧 Field Service Technician
+- Mobile-optimized interface for field use across smartphones, tablets, and rugged devices.
+- Review dispatch instructions, facility locations, and asset equipment history.
+- Accept or decline assigned jobs with feedback to management.
+- Transition tickets to `In Progress` upon arrival on-site.
+- Log diagnosis, itemized actions taken, elapsed labor hours, and spare parts consumed.
+- Utilize AI Troubleshooting powered by Google Gemini and past resolution history.
+- Upload photo proof of completed repairs and submit for customer verification.
+
+### 4. 🛡️ Organization Administrator
+- Manage multi-tenant organization profile and company settings.
+- Invite team members with assigned roles (Manager, Technician, Customer).
+- Manage facility locations, buildings, rooms, and physical assets.
+- Review immutable database audit logs for all security, authentication, and state change events.
+
+---
+
+## 💻 Technology Stack
+
+| Layer | Technology | Version | Purpose in ZERVUONO |
 |---|---|---|---|
-| **Admin** | `admin@zervuno.com` | `Password123!` | User governance, invitations, tenant settings, and immutable audit logs |
-| **Manager** | `manager@zervuno.com` | `Password123!` | Dispatch requests, assign technicians, track team workload, PM schedules, and operational KPIs |
-| **Technician** | `tech@zervuno.com` | `Password123!` | Mobile-first field view: accept jobs, log labor hours & materials, AI diagnostics, and completion proof |
-| **Customer** | `customer@zervuno.com` | `Password123!` | Report issues with photos, track progress, verify resolution (or reopen with reason), and rate repairs |
-
-> **Pro-Tip:** The Sign-In page at `http://localhost:3000/login` features **1-Click Quick Login** buttons for all four demo profiles for immediate evaluation without typing.
-
----
-
-## 3. Real-World Lifecycle State Machine
-
-Every maintenance request transitions through a strictly validated backend state machine:
-
-```
-[Submitted] ─────────► [Assigned] ─────────► [Accepted] ─────────► [In Progress]
-     │                      │                      │                     │
-     ▼                      ▼                      ▼                     ▼
-[Cancelled]           [Under Review]         [Under Review]        [Awaiting Verification]
-                            ▲                                            │
-                            │                                            ▼
-                            └──────────────── [Reopened] ◄───────────────┤
-                                                                         ▼
-                                                                     [Closed]
-```
-
-- **Submitted**: Issue reported with title, description, category, location, asset tag, and photo evidence.
-- **Assigned**: Manager reviews request, sets SLA priority, assigns technician, and supplies dispatch instructions. Persists an in-app notification to the technician.
-- **Accepted**: Technician reviews instructions on mobile and accepts (or declines with reason to return to review).
-- **In Progress**: Technician starts work on-site, logging diagnostic findings, labor hours, replacement parts, and photo proof.
-- **Awaiting Verification**: Technician files a completion report. The customer is alerted to inspect the work.
-- **Closed**: Customer confirms the repair is fixed and submits optional 1-5 star feedback.
-- **Reopened**: Customer reports symptoms persist, providing a mandatory reason and escalating back to management.
+| **Backend Framework** | **FastAPI** | `^0.111.0` | Asynchronous RESTful API server, OpenAPI auto-generation, dependency injection |
+| **ASGI Server** | **Uvicorn** | `^0.30.0` | High-performance asynchronous HTTP server with hot reload |
+| **Language** | **Python** | `3.12+` | Modern type hints, structured pattern matching, async/await |
+| **ORM** | **SQLAlchemy** | `^2.0.30` | Declarative relational mapping, connection pooling, typed queries |
+| **Schema Validation** | **Pydantic** | `^2.7.0` | Request validation, response serialization, strict type checking |
+| **Settings Management**| **Pydantic Settings** | `^2.3.0` | Centralized `.env` parsing with validation and fallbacks |
+| **Database Migrations**| **Alembic** | `^1.13.0` | Version-controlled database schema migrations |
+| **Database Engine** | **PostgreSQL** | `15+ / Neon` | ACID-compliant relational cloud persistence with connection pooling |
+| **Database Drivers** | **psycopg / psycopg2 / pg8000** | Latest | Native C-binary drivers with pure-Python fallback for cloud resiliency |
+| **Password Hashing** | **Argon2id (`argon2-cffi`)** | `^23.1.0` | Memory-hard cryptographic hashing resistant to GPU cracking |
+| **Authentication** | **PyJWT** | `^2.8.0` | Stateless JSON Web Tokens (Bearer auth + HttpOnly secure cookies) |
+| **AI Diagnostics** | **Google Gemini (`google-genai`)**| `^0.1.0` | Natural language category detection, priority recommendation, troubleshooting |
+| **Frontend Framework** | **React** | `^18.3.1` | Declarative component-driven user interface |
+| **Language (Frontend)**| **TypeScript** | `^5.5.4` | Static typing, interface definitions, zero runtime type errors |
+| **Build Tool & Bundler**| **Vite** | `^5.4.3` | Instant Hot Module Replacement (HMR) and optimized production build |
+| **Client State / Cache**| **TanStack React Query** | `^5.56.2` | Server-state caching, background polling (10s intervals), invalidations |
+| **Styling** | **Tailwind CSS** | `^3.4.11` | Utility-first CSS, responsive design tokens, dark mode support |
+| **Routing** | **React Router DOM** | `^6.26.2` | Client-side routing, protected routes, role-based workspace redirects |
+| **Icons** | **Lucide React** | `^0.441.0` | Modern, consistent SVG iconography |
+| **Testing (Backend)** | **Pytest + Pytest-Asyncio** | `^8.2.0` | Automated backend testing, test client execution, workflow validation |
+| **Testing (Frontend)**| **Vitest** | `^2.1.1` | Unit and integration testing for client-side API layer and auth store |
 
 ---
 
-## 4. Local Development on Windows (PowerShell)
+## 🏛️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph ClientLayer["🖥️ Frontend Client (Vercel SPA)"]
+        UI["React 18 + TypeScript + Tailwind UI"]
+        RQ["TanStack React Query (State Cache & Polling)"]
+        AUTH["Auth Context (JWT / SessionStorage / Cookies)"]
+        UI <--> RQ
+        UI <--> AUTH
+    end
+
+    subgraph APILayer["⚙️ Backend API (Render Cloud Service)"]
+        FASTAPI["FastAPI 0.111 Application"]
+        CORS["CORS & Timing Middleware"]
+        SEC["Security & RBAC Dependency Guard"]
+        SM["State Machine Engine (Request Transitions)"]
+        AI_SVC["AI Diagnostic Service (Google Gemini)"]
+        STORAGE["Storage Service (BYTEA Stream / S3)"]
+
+        FASTAPI --> CORS
+        FASTAPI --> SEC
+        FASTAPI --> SM
+        FASTAPI --> AI_SVC
+        FASTAPI --> STORAGE
+    end
+
+    subgraph DataLayer["🗄️ Persistence Layer (Neon Cloud PostgreSQL)"]
+        POOL["SQLAlchemy Connection Pool"]
+        DB[("PostgreSQL Relational DB
+        • users & sessions
+        • organizations & memberships
+        • maintenance_requests
+        • request_status_history
+        • work_logs & materials
+        • attachments (BYTEA)
+        • audit_events & notifications")]
+        POOL --> DB
+    end
+
+    ClientLayer <==>|HTTPS / JSON REST / FormData| APILayer
+    APILayer <==>|Async SQLAlchemy 2 Pool| DataLayer
+```
+
+---
+
+## 📸 Screenshots & UI Walkthrough
+
+*(Screenshots can be captured directly from your local instance or deployed URL)*
+
+| View | Description | Preview |
+|---|---|---|
+| **Public Landing Page** | Value proposition, interactive capabilities, maintenance lifecycle visualization, and CTA. | `[Screenshot: Public Landing Page / Hero Section]` |
+| **Customer Hub** | Ticket creation with dynamic category recommendation, location selector, and active orders. | `[Screenshot: Customer Dashboard & Create Modal]` |
+| **Manager Dispatch Queue** | Unified requests table, technician workload cards, assignment modal with instructions. | `[Screenshot: Manager Dispatch & Triage Board]` |
+| **Technician Mobile View** | Quick status toggles (Accept, Start Work), labor/parts logging, and completion modal. | `[Screenshot: Technician Field Workspace]` |
+| **AI Troubleshooting** | Instant diagnostic checklists and similar past resolution retrieval powered by Gemini. | `[Screenshot: AI Troubleshooting Drawer]` |
+| **Admin Governance** | Member roster, role invitations, facility locations manager, and immutable audit logs. | `[Screenshot: Admin Governance & Audit View]` |
+
+---
+
+## 🛠️ Local Installation & Development Setup
+
+Follow these steps to run ZERVUONO locally on Windows (PowerShell), macOS, or Linux.
 
 ### Prerequisites
-- Python 3.12+
-- Node.js v20+ & npm
-- PostgreSQL running locally or a Neon cloud connection string
+- **Python:** Version `3.12` or higher installed ([python.org](https://www.python.org/downloads/))
+- **Node.js:** Version `20` LTS or higher with `npm` ([nodejs.org](https://nodejs.org/))
+- **PostgreSQL:** Local PostgreSQL server running OR a free [Neon.tech](https://neon.tech) cloud database URL.
+- **Git:** Version control CLI.
 
-### Step 1: Clone & Configure Environment
+---
+
+### Step 1: Clone Repository & Configure Workspace
 
 ```powershell
-# Navigate to the workspace
-cd d:\ZENVURO
+# Clone the repository
+git clone https://github.com/Basanagouda-2006/ZERVUONO.git
+cd ZERVUONO
 
-# Configure environment files
+# Configure root environment
+Copy-Item .env.example .env
 Copy-Item .env.example backend\.env
 ```
 
-### Step 2: Set Up Backend
+---
+
+### Step 2: Configure Environment Variables
+
+Edit `backend/.env` with your settings:
+
+```env
+ENVIRONMENT=development
+PROJECT_NAME=Zervuno
+VERSION=1.0.0
+API_V1_STR=/api/v1
+
+SECRET_KEY=generate_a_secure_random_hex_secret_here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+REFRESH_TOKEN_EXPIRE_DAYS=30
+COOKIE_SECURE=false
+
+# Database: Neon cloud URL or local PostgreSQL
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/zervuno
+
+# Storage Backend: "local" (uses PostgreSQL bytea + disk) or "s3"
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+
+# Optional AI Integration (Google Gemini)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+
+# Seed initial demo organization on first run (optional)
+SEED_DEMO_DATA=false
+```
+
+---
+
+### Step 3: Backend Setup (Python / FastAPI)
+
+Open a PowerShell terminal:
 
 ```powershell
-cd d:\ZENVURO\backend
+# Navigate to backend directory
+cd backend
 
-# Create virtual environment
+# Create Python virtual environment
 python -m venv .venv
 
-# Activate virtual environment
+# Activate virtual environment (Windows PowerShell)
 .\.venv\Scripts\Activate.ps1
 
-# Install dependencies
+# (On Linux / macOS use: source .venv/bin/activate)
+
+# Upgrade pip and install all dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Run migrations (or initialize fresh database schema)
-alembic upgrade head
+# Run database migrations / initialize tables
+python -c "from app.db.session import init_tables; init_tables()"
 
-# Seed demo dataset
+# (Optional) Seed demo dataset for testing
 python -m app.db.seed
 
-# Start FastAPI server
+# Start FastAPI development server
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-API Documentation will be accessible at: `http://127.0.0.1:8000/docs`
 
-### Step 3: Set Up Frontend
+The FastAPI backend will be live at:
+- API Base: `http://127.0.0.1:8000`
+- Interactive Swagger UI: `http://127.0.0.1:8000/docs`
+- Health Endpoint: `http://127.0.0.1:8000/health`
 
-Open a new PowerShell terminal:
+---
+
+### Step 4: Frontend Setup (React / Vite)
+
+Open a **second** terminal window:
 
 ```powershell
-cd d:\ZENVURO\frontend
+# Navigate to frontend directory
+cd frontend
 
-# Install dependencies
+# Install Node modules
 npm install
 
 # Start Vite development server
-npm run dev -- --host 127.0.0.1 --port 3000
+npm run dev
 ```
-Open your browser to: `http://localhost:3000/`
+
+The React frontend will be live at:
+- Web Application: `http://localhost:5173` (or `http://localhost:3000`)
 
 ---
 
-## 5. Running in Visual Studio Code (VS Code)
+## 🧪 Testing Instructions
 
-The repository comes pre-configured with a `.vscode/` setup for 1-click execution, debugging, and terminal automation.
+### 1. Backend Automated Test Suite (Pytest)
+The backend test suite validates authentication, security constraints, multi-tenant RBAC scoping, and the end-to-end request state machine.
 
-### Option A: 1-Click Launch via VS Code Tasks (Recommended)
-1. Open the project root folder (`d:\ZENVURO`) in VS Code:
-   ```powershell
-   code d:\ZENVURO
-   ```
-2. Press **`Ctrl + Shift + B`** (or go to `Terminal` -> `Run Build Task...`).
-3. Select **`Run Full Stack (Backend + Frontend)`**.
-   - This starts both the FastAPI backend (`http://localhost:8000`) and Vite frontend (`http://localhost:3000`) in parallel inside dedicated VS Code terminal tabs.
-
-### Option B: Interactive Debugger (F5)
-1. Open the **Run and Debug** panel on the left sidebar (`Ctrl + Shift + D`).
-2. In the dropdown at the top, choose:
-   - **`Full Stack (Debug Backend + Frontend)`** to automatically start the frontend server and attach the Python debugger to FastAPI.
-   - Or **`Debug Backend (FastAPI)`** to debug API endpoints and step through route handlers with breakpoints.
-3. Press **`F5`**.
-
-### Option C: Integrated Split Terminal
-1. Open the Integrated Terminal in VS Code: **`Ctrl + ~`** (or `Terminal` -> `New Terminal`).
-2. Split the terminal into two panes (`Ctrl + Shift + 5` or click the split terminal icon).
-3. In **Pane 1 (Backend)**:
-   ```powershell
-   cd backend
-   .\.venv\Scripts\Activate.ps1
-   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
-4. In **Pane 2 (Frontend)**:
-   ```powershell
-   cd frontend
-   npm run dev
-   ```
-
----
-
-## 6. Verification & Test Suite Execution
-
-Both frontend and backend include automated test suites.
-
-### Run Backend Pytest Suite
 ```powershell
-cd d:\ZENVURO\backend
-.\.venv\Scripts\pytest.exe -v
+cd backend
+python -m pytest -v backend/tests
 ```
-**Actual Verification Results:**
-```
+
+**Expected Result (17/17 tests passing):**
+```text
 tests/test_auth.py::test_health_check PASSED
 tests/test_auth.py::test_login_demo_admin PASSED
 tests/test_auth.py::test_login_invalid_password PASSED
 tests/test_auth.py::test_register_new_user PASSED
+tests/test_auth.py::test_register_all_roles PASSED
+tests/test_auth.py::test_get_current_user_unauthenticated PASSED
+tests/test_auth.py::test_get_current_user_authenticated PASSED
+tests/test_auth.py::test_logout_flow PASSED
 tests/test_rbac_multitenancy.py::test_customer_cannot_assign_technician PASSED
 tests/test_rbac_multitenancy.py::test_customer_only_sees_their_own_requests PASSED
 tests/test_rbac_multitenancy.py::test_operational_report_requires_manager_or_admin PASSED
 tests/test_workflow.py::test_full_maintenance_workflow PASSED
 tests/test_workflow.py::test_reopen_workflow PASSED
-======================= 9 passed in 1.45s ========================
+tests/test_workflow.py::test_location_auto_creation_and_management PASSED
+tests/test_workflow.py::test_public_organizations_list PASSED
+tests/test_workflow.py::test_technician_claim_and_complete_workflow PASSED
+tests/test_workflow.py::test_file_upload_workflow PASSED
+======================== 17 passed in 3.81s ========================
 ```
 
-### Run Frontend Vitest & TypeScript Build Check
+### 2. Frontend Automated Test Suite (Vitest)
+Validates auth token storage, multi-tenant context propagation, role validation, error boundary behavior, and URL resolution.
+
 ```powershell
-cd d:\ZENVURO\frontend
-npm test
+cd frontend
+npm run test
+```
+
+**Expected Result (8/8 tests passing):**
+```text
+✓ src/tests/workflow.test.ts (8 tests)
+Test Files  1 passed (1)
+Tests       8 passed (8)
+```
+
+### 3. Production Frontend Typecheck & Build Check
+```powershell
+cd frontend
 npm run build
 ```
-**Actual Verification Results:**
-```
-✓ src/tests/workflow.test.ts (3 tests) 3ms
-Test Files: 1 passed (1)
-Tests: 3 passed (3)
+
+**Expected Result:**
+```text
 ✓ 1650 modules transformed.
-✓ built in 2.14s
+dist/index.html                   1.17 kB
+dist/assets/index-DGEESsmg.css   44.81 kB
+dist/assets/index-kwe0wwIc.js   427.14 kB
+✓ built in 3.75s
 ```
 
 ---
 
-## 7. Neon Cloud PostgreSQL Setup
+## 🔒 Security & Multi-Tenancy Architecture
 
-To connect to Neon:
-1. Create a database on [Neon.tech](https://neon.tech).
-2. Copy your connection string: `postgresql://user:password@ep-sample-1234.us-east-2.aws.neon.tech/neondb?sslmode=require`
-3. Paste it into `backend/.env` as `DATABASE_URL`:
-   ```env
-   DATABASE_URL="postgresql+psycopg://user:password@ep-sample-1234.us-east-2.aws.neon.tech/neondb?sslmode=require"
-   ```
-4. Run migrations:
-   ```powershell
-   alembic upgrade head
-   python -m app.db.seed
-   ```
-5. You can inspect all tables and relations directly using Neon's built-in SQL Editor, DBeaver, or pgAdmin.
+1. **Strict Multi-Tenant Scoping:** All database queries require an `organization_id` extracted from the server-validated user `Membership`. Requesters can never access work orders, assets, or locations belonging to another tenant.
+2. **Argon2id Hashing:** User passwords are never stored in plain text. They are hashed using `argon2-cffi` with salt and memory cost parameters.
+3. **Session Dual-Storage & HttpOnly Cookies:** Authentication tokens are delivered via JWT and protected by `HttpOnly`, `SameSite=Lax` cookies, with graceful bearer token fallback for mobile clients and cross-domain APIs.
+4. **Persistent Object Storage with Zero Data Loss:** Attachments are streamed into PostgreSQL `BYTEA` storage and served via `/api/v1/files/{id}/view`, guaranteeing that ephemeral container sleep cycles on Render do not break image URLs.
+5. **Immutable Audit Trails:** Authentication successes/failures, technician assignments, status transitions, and role invitations are permanently logged to the `audit_events` table.
 
 ---
 
-## 8. Production Deployment Guide
+## ⚠️ Known Limitations & Future Scope
 
-### Deploy Backend (Render / Railway)
-1. Link your GitHub repository to Render / Railway.
-2. Select Python environment.
-3. Build Command: `pip install -r backend/requirements.txt && alembic -c backend/alembic.ini upgrade head`
-4. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend`
-5. Configure Environment Variables: `DATABASE_URL`, `SECRET_KEY`, `ENVIRONMENT=production`, `COOKIE_SECURE=true`.
+### Known Limitations
+1. **Free Tier Cold Starts:** The backend is deployed on Render's free tier. If inactive for 15 minutes, Render spins down the container, causing a 30–50 second delay on the initial request.
+2. **Push Notifications:** Notifications are stored in the database and polled every 10–15 seconds via React Query; WebSockets / WebPush have not yet been integrated.
+3. **Offline Mobile Mode:** Technicians require an active internet connection to submit work logs and complete jobs; local IndexedDB offline syncing is not yet implemented.
 
-### Deploy Frontend (Vercel)
-1. Import repository on [Vercel](https://vercel.com).
-2. Set Root Directory to `frontend`.
-3. Framework Preset: `Vite`.
-4. Build Command: `npm run build`
-5. Output Directory: `dist`
-6. Add rewrite rule in `vercel.json` to proxy `/api/(.*)` to your production backend URL.
+### Future Scope
+- **Native Mobile Apps:** Packaging the technician and customer interfaces using React Native or Flutter for offline caching and device camera hardware bindings.
+- **IoT Sensor Integrations:** Ingesting MQTT telematics from industrial chillers, vibration sensors, and power meters to automatically trigger preventive maintenance work orders.
+- **Barcode & QR Scanning:** Scanning physical equipment QR stickers to open asset history and initiate work orders instantaneously.
+- **Automated Invoicing & ERP Sync:** Direct integration with accounting platforms (QuickBooks, SAP) for material cost billing.
 
 ---
 
-## 9. Security & Compliance Implementation
+## 📄 License & Credits
 
-- **Strict Multi-Tenant Scoping**: All database queries enforce `organization_id` ownership derived from server-validated memberships, preventing cross-tenant data leakage.
-- **Argon2id Password Hashing**: State-of-the-art memory-hard hashing protects user credentials against GPU cracking attacks.
-- **HttpOnly Secure Session Cookies**: Session tokens are isolated from JavaScript DOM access to mitigate XSS-based session hijacking.
-- **Immutable Audit Logging**: Key authentication events, dispatch updates, and administrative modifications are written to the database audit table.
-- **Input Sanitization & Rate Limits**: Pydantic schema validation protects all incoming payloads against malformed data and prototype pollution.
+Developed with pride by **Basanagouda** as a BCA Final Year Project and Cloud-Native Full-Stack Portfolio Application.
 
----
-
-© 2026 Zervuno. Built with pride for autonomous operations. Keep work moving.
+- **License:** MIT License. Free for educational, research, and commercial evaluation.
+- **Inquiries & Portfolio:** Connect via [GitHub](https://github.com/Basanagouda-2006) or the in-app Contact page.
