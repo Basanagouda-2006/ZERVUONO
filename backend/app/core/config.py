@@ -104,6 +104,10 @@ class Settings(BaseSettings):
             new_q = urllib.parse.urlencode(q_dict, doseq=True)
             url = urllib.parse.urlunsplit((parsed_p.scheme, parsed_p.netloc, parsed_p.path, new_q, parsed_p.fragment))
 
+        # Skip DNS checks during automated testing or when using local SQLite
+        if os.getenv("ENVIRONMENT") == "testing" or url.startswith("sqlite"):
+            return url
+
         # Ensure reliable DNS resolution for cloud-hosted databases (e.g. Neon, AWS RDS)
         try:
             import socket
